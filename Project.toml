@@ -1,0 +1,7 @@
+name = "signatureTensors"
+uuid = "e6efa0c5-1cd0-4528-bbb2-cf1d4bca138c"
+authors = ["Leonard Schmitz <lschmitz@math.tu-berlin>"]
+version = "0.1.0"
+
+[deps]
+Oscar = "f1435218-dba5-11e9-1e4d-f1a5fab5fc13"

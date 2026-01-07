@@ -11,7 +11,9 @@ export
   bary, 
   bary_Nminus1_samples_fixed_inverse, 
   tensor_sequence, 
-  ideal_of_entries
+  ideal_of_entries, 
+  embedding_matrix, # should not be exported
+  sig_pw_mono
   
 
 
@@ -154,7 +156,25 @@ function sig_axis(TTS::TruncTensorSeq)
   sample = [sig_segment_standard_direction(TTS,i) for i in (1:d)]
   F,s = free_trunc_sig_alg_multiv(k,d)
   chen = prod([free_sig_from_sample(i,F) for i in (1:d)])
-  return evaluate(chen,sample)
+  return evaluate(chen,sample) #TODO: this should be the same as multiplication of the signatuers directly, without fromal chen and eval 
+end
+
+function embedding_matrix(m::Vector{Int},i::Int)
+  M = sum(m)
+  A = zero_matrix(QQ,M,m[i])
+  A[sum(m[1:i-1])+1:sum(m[1:i]),:] = identity_matrix(QQ,m[i])
+  return A 
+end 
+
+function sig_pw_mono(TTS::TruncTensorSeq,m)
+  k = truncation_level(TTS) 
+  R = base_ring(TTS)
+  d = ambient_dimension(TTS)
+  if sum(m)!=d
+    error("m must be a composition of the ambient dimension") 
+  end 
+  sigs = [matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) for i in (1:length(m))]
+  return prod(sigs)
 end
 
 function Base.Matrix(a::TruncTensorSeqElem)

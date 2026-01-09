@@ -13,7 +13,11 @@ export
   tensor_sequence, 
   ideal_of_entries, 
   embedding_matrix, # should not be exported
-  sig_pw_mono
+  coreSplineTrafo, # should not be exported 
+  sig_pw_mono, 
+  generate_lyndon_words, # should not be here
+  dim_free_nil_lie_alg, # should not be here
+  ideal_of_lyndon_entries
   
 
 
@@ -164,17 +168,54 @@ function embedding_matrix(m::Vector{Int},i::Int)
   A = zero_matrix(QQ,M,m[i])
   A[sum(m[1:i-1])+1:sum(m[1:i]),:] = identity_matrix(QQ,m[i])
   return A 
+end
+
+function nextBlock(A, r::Int, mi)
+    nrows, ncols = size(A)
+    vecs = zeros(QQ, ncols, r)
+    for i in 1:r
+        for j in 1:ncols
+            vecs[j, i] = binomial(j, i)
+        end
+    end
+    return matrix(QQ,Matrix(A) * Matrix(vecs))
+end
+
+function coreSplineTrafo(m::Vector{Int}, r::Int)
+    total_dim = sum(m)
+    if r == 0
+        return identity_matrix(QQ,total_dim)
+    end
+    zz = 1 
+    crb = identity_matrix(QQ,m[1])
+    B = crb
+    while zz < length(m)
+        nr = size(B, 2)
+        start_col = nr - m[zz] + 1
+        end_col   = nr
+        subB = B[:, start_col:end_col]
+        nb = nextBlock(subB, r, zz)
+        idpart = identity_matrix(QQ,m[zz+1] - r)
+        B = block_diagonal_matrix([hcat(B, nb), idpart])
+        zz += 1
+    end
+    return B
 end 
 
-function sig_pw_mono(TTS::TruncTensorSeq,m)
+function sig_pw_mono(TTS::TruncTensorSeq,m,r=0)
   k = truncation_level(TTS) 
   R = base_ring(TTS)
   d = ambient_dimension(TTS)
-  if sum(m)!=d
+  if d != sum(m) - r*(length(m) -1)
     error("m must be a composition of the ambient dimension") 
   end 
   sigs = [matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) for i in (1:length(m))]
-  return prod(sigs)
+  res = prod(sigs)
+  if r == 0 
+    return res
+  else 
+    return matrix_tensorSeq_congruence(Array(coreSplineTrafo(m,r)),res)
+  end
 end
 
 function Base.Matrix(a::TruncTensorSeqElem)
@@ -195,7 +236,11 @@ function Oscar.QQMatrix(a::TruncTensorSeqElem)
     end 
   end 
   return res
-end  
+end 
+
+#################
+# ideal constructors 
+################# 
 
 function ideal_of_entries(a::TruncTensorSeqElem)
   A = parent(a)
@@ -206,6 +251,48 @@ function ideal_of_entries(a::TruncTensorSeqElem)
   return  ideal(R,gens4learn)
 end
 
+function nextword(k::Int, w::Vector{Int}, alphabet::Vector{Int})
+    # repeat w enough times and truncate to length n
+    reps = (k ÷ length(w)) + 1
+    x = repeat(w, reps)[1:k]
+    # remove trailing maximal letters
+    while !isempty(x) && x[end] == alphabet[end]
+        pop!(x)
+    end
+    if !isempty(x)
+        last_char = x[end]
+        next_char_index = findfirst(==(last_char), alphabet) + 1
+        x[end] = alphabet[next_char_index]
+    end
+    return x
+end
+
+
+function generate_lyndon_words(k::Int, alphabet::Vector{Int})
+    lwords = Vector{Vector{Int}}()
+    w = [alphabet[1]]
+    while length(w) <= k
+        push!(lwords, copy(w))
+        w = nextword(k, w, alphabet)
+        isempty(w) && break
+    end
+    return lwords
+end
+
+function dim_free_nil_lie_alg(d::Int,k::Int)
+  return sum([div(moebius_mu(a)*d^(div(ell,a)),ell) for ell in (1:k) for a in (1:k) if divides(ell,a)[1]])
+end
+
+function ideal_of_lyndon_entries(tts::TruncTensorSeqElem)
+  A = parent(tts)
+  R = base_ring(A)
+  d = ambient_dimension(A)
+  k = truncation_level(A)
+  lynd = generate_lyndon_words(k, Vector((1:d)))
+  res = ideal(R,zero(R))
+  elem_tts = tensor_sequence(tts)
+  return ideal(R,[elem_tts[length(w)+1][w...] for w in lynd])
+end
 
 
 

@@ -1,7 +1,11 @@
 name = "signatureTensors"
 uuid = "e6efa0c5-1cd0-4528-bbb2-cf1d4bca138c"
-authors = ["Leonard Schmitz <lschmitz@math.tu-berlin>"]
 version = "0.1.0"
+authors = ["Leonard Schmitz <lschmitz@math.tu-berlin>"]
 
 [deps]
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Oscar = "f1435218-dba5-11e9-1e4d-f1a5fab5fc13"
+
+[compat]
+Combinatorics = "1.1.0"

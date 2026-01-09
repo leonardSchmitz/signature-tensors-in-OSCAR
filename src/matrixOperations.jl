@@ -12,7 +12,9 @@ export
   QQMatrixWNFP1m1oddHelpertrafo, 
   QQMatrixSigAxisNF, # normal forms
   QQMatrixSigNF, 
-  QQMatrixUdmUdTNF
+  QQMatrixUdmUdTNF, 
+  generic_transform, 
+  generic_transform_GL
   #QQMatrixUmUT_MPinverse
 
 ######################################
@@ -40,6 +42,20 @@ end
 function QQMatrixQ(d::Int)
   return diagonal_matrix([(-one(QQ))^(i+1) for i in (1:d)])
 end 
+
+function generic_transform_GL(_d,_max_int=10)
+   A = QQ.(rand(-1*_max_int:_max_int, _d, _d))
+   if is_invertible( matrix(QQ,A))
+     return A
+   else
+     return generic_transform(_d,_max_int)
+   end
+end
+
+function generic_transform(_d,_m,_max_int=10)
+   return QQ.(rand(-1*_max_int:_max_int, _d, _m))
+end
+
 
 
 ############################################

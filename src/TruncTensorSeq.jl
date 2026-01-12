@@ -19,7 +19,24 @@ export
   dim_free_nil_lie_alg, # should not be here
   ideal_of_lyndon_entries
   
+"""
+    TruncTensorSeq(base_ring::QQMPolyRing, trunc_level::Int, amb_dim::Int)
 
+Represents a truncated tensor sequence over a polynomial ring `QQMPolyRing`, with truncation
+level `trunc_level` and ambient dimension `amb_dim`. Used to compute signatures of paths.
+
+# Arguments
+- `base_ring::QQMPolyRing`: the polynomial ring (e.g., `QQ[a11,a21,a12,a22]`)
+- `trunc_level::Int`: truncation level (maximum tensor order)
+- `amb_dim::Int`: ambient dimension
+
+# Example
+  >julia
+   d, m, k = 2, 2, 2
+   R, a = polynomial_ring_sig_transform(d, m)
+   TTS = trunc_tensor_seq(R, k, m)
+"""
+TruncTensorSeq
 
 struct TruncTensorSeq
   base_ring::QQMPolyRing
@@ -31,6 +48,29 @@ truncation_level(F::TruncTensorSeq) = F.trunc_level
 ambient_dimension(F::TruncTensorSeq) = F.amb_dim
 base_ring(F::TruncTensorSeq) = F.base_ring
 
+"""
+    TruncTensorSeqElem(parent::TruncTensorSeq, elem::Vector{Array{QQMPolyRingElem}})
+
+Represents a single element of a truncated tensor sequence, corresponding to the
+signature of a specific path.
+
+# Arguments
+- `parent::TruncTensorSeq`: the parent truncated tensor sequence
+- `elem::Vector{Array{QQMPolyRingElem}}`: vector of arrays holding the tensor coefficients
+
+# Example
+    d, m, k = 2, 2, 2
+    R, a = polynomial_ring_sig_transform(d, m)
+    TTS = trunc_tensor_seq(R, k, m)
+    seq = sig_axis(TTS)
+    TTS_elem = TruncTensorSeqElem(TTS, seq)
+
+# Methods
+- `tensor_sequence(TTS_elem)`: returns the tensor data (vector of arrays)
+- `Base.parent(TTS_elem)`: returns the parent `TruncTensorSeq`
+"""
+TruncTensorSeqElem
+
 struct TruncTensorSeqElem
   parent::TruncTensorSeq
   elem::Vector{Array{QQMPolyRingElem}}
@@ -39,10 +79,35 @@ end
 Base.parent(a::TruncTensorSeqElem) = a.parent
 tensor_sequence(a::TruncTensorSeqElem) = a.elem
 
+"""
+    trunc_tensor_seq(base_ring::QQMPolyRing, trunc_level::Int, amb_dim::Int)
+
+Convenience constructor for `TruncTensorSeq`. Creates a truncated tensor sequence
+with the given base polynomial ring, truncation level, and ambient dimension.
+
+# Arguments
+- `base_ring::QQMPolyRing`: the polynomial ring
+- `trunc_level::Int`: truncation level
+- `amb_dim::Int`: ambient dimension
+
+# Example
+    R, a = polynomial_ring_sig_transform(2,2)
+    TTS = trunc_tensor_seq(R, 2, 2)
+"""
+trunc_tensor_seq
+
 function trunc_tensor_seq(base_ring::QQMPolyRing,trunc_level::Int,amb_dim::Int)
   TTS = TruncTensorSeq(base_ring, trunc_level, amb_dim)
   return TTS
 end
+
+
+"""
+    trunc_tensor_seq_elem(TTS::TruncTensorSeq, seq::Vector{Array{QQMPolyRingElem}})
+
+Constructs a `TruncTensorSeqElem` from a truncated tensor sequence `TTS` and a sequence of polynomial arrays `seq`.
+"""
+trunc_tensor_seq_elem
 
 function trunc_tensor_seq_elem(TTS::TruncTensorSeq,seq::Vector{Array{QQMPolyRingElem}})
   return TruncTensorSeqElem(TTS, seq)
@@ -127,6 +192,29 @@ function Base.one(TTS::TruncTensorSeq)
   return TruncTensorSeqElem(TTS,_C0_seq(k,d,R,true))  ### this is not working 
 end
 
+"""
+    sig_mono(TTS::TruncTensorSeq)
+
+Constructs a `TruncTensorSeqElem` representing the **monomial signature sequence**
+for a given truncated tensor sequence `TTS`.  
+
+This function builds the canonical **monomial sequence** of tensors used in the 
+computation of signatures for paths in the algebraic setting.
+
+# Arguments
+- `TTS::TruncTensorSeq`: the parent truncated tensor sequence.
+
+# Returns
+- `TruncTensorSeqElem`: a single element containing the monomial tensor sequence.
+
+# Example
+d, m, k = 2, 2, 2
+R, a = polynomial_ring_sig_transform(d, m)
+TTS = trunc_tensor_seq(R, k, m)
+mono_seq = sig_mono(TTS)
+"""
+sig_mono
+
 function sig_mono(TTS::TruncTensorSeq)
   k = truncation_level(TTS) 
   d = ambient_dimension(TTS)
@@ -147,11 +235,37 @@ function sig_segment(TTS::TruncTensorSeq,v::Vector{QQMPolyRingElem})
   return matrix_tensorSeq_congruence(v,C)
 end
 
+"""
+    sig_segment_standard_direction(TTS::TruncTensorSeq, j::Int)
+
+Returns the truncated signature of the standard segment `Ej` according to Theorem 6.7.
+
+# Example
+    R, a = polynomial_ring_sig_transform(2,2)
+    TTS = trunc_tensor_seq(R, 2, 2)
+    sigEj = sig_segment_standard_direction(TTS, 1)
+"""
+sig_segment_standard_direction
+
+
 function sig_segment_standard_direction(TTS::TruncTensorSeq,_i::Int)
   d = ambient_dimension(TTS)
   R = base_ring(TTS)
   return sig_segment(TTS,_one_hot(_i,d,R))
 end
+
+"""
+    sig_axis(TTS::TruncTensorSeq)
+
+Returns the tensor sequence axes of a truncated tensor sequence `TTS`.
+Used as input for `matrix_tensorSeq_congruence`.
+
+# Example
+    R, a = polynomial_ring_sig_transform(2,2)
+    TTS = trunc_tensor_seq(R, 2, 2)
+    axes = sig_axis(TTS)
+"""
+sig_axis
 
 function sig_axis(TTS::TruncTensorSeq)
   k = truncation_level(TTS) 
@@ -202,6 +316,33 @@ function coreSplineTrafo(m::Vector{Int}, r::Int)
     return B
 end 
 
+
+"""
+    sig_pw_mono(TTS::TruncTensorSeq, m)
+
+Constructs the **piecewise monomial signature** of a truncated tensor sequence `TTS` 
+according to a composition `m` of the ambient dimension.
+
+This function computes the tensor sequence signature by splitting the ambient dimension 
+into blocks specified by `m` and applying `matrix_tensorSeq_congruence` and `sig_mono` 
+to each block. The results are then multiplied together to obtain the piecewise signature.
+
+# Arguments
+- `TTS::TruncTensorSeq`: the parent truncated tensor sequence.
+- `m::Vector{Int}`: a composition of the ambient dimension (vector of positive integers summing to `ambient_dimension(TTS)`).
+
+# Returns
+- `TruncTensorSeqElem`: the piecewise monomial signature element corresponding to the composition `m`.
+
+# Example
+d, k = 4, 2
+R, vars = polynomial_ring_sig_transform(d,2)
+TTS = trunc_tensor_seq(R, k, d)
+m = [2,2]  # composition of the ambient dimension
+pw_mono_sig = sig_pw_mono(TTS, m)
+"""
+sig_pw_mono
+
 function sig_pw_mono(TTS::TruncTensorSeq,m,r=0)
   k = truncation_level(TTS) 
   R = base_ring(TTS)
@@ -241,6 +382,16 @@ end
 #################
 # ideal constructors 
 ################# 
+
+"""
+    ideal_of_entries(mat::AbstractMatrix)
+
+Returns the ideal in the polynomial ring generated by the entries of `mat`.
+
+# Example
+    I = ideal_of_entries(s_pwln - sY)
+"""
+ideal_of_entries
 
 function ideal_of_entries(a::TruncTensorSeqElem)
   A = parent(a)
@@ -446,6 +597,19 @@ function Base.:log(a::TruncTensorSeqElem)
   return evaluate(p,[a])
 end
 
+"""
+    matrix_tensorSeq_congruence(matrix::Array, b::TruncTensorSeqElem)
+
+Returns a `TruncTensorSeqElem` representing the tensor congruence of the vector/matrix `a`
+with respect to the tensor axes.
+
+# Example
+    R, a = polynomial_ring_sig_transform(2,2)
+    TTS = trunc_tensor_seq(R, 2, 2)
+    sigX = matrix_tensorSeq_congruence([1, 2], sig_axis(TTS))
+"""
+matrix_tensorSeq_congruence 
+
 function matrix_tensorSeq_congruence(matrix::Array, b::TruncTensorSeqElem)
   TTSm = parent(b) 
   k = truncation_level(TTSm)
@@ -459,9 +623,55 @@ function matrix_tensorSeq_congruence(matrix::Array, b::TruncTensorSeqElem)
   return trunc_tensor_seq_elem(TTSd,resSeq)
 end
 
+"""
+    bary_2samples(a::TruncTensorSeqElem, b::TruncTensorSeqElem)
+
+Computes the **barycenter (geometric mean)** of two truncated tensor sequence elements `a` and `b` 
+in the free truncated signature algebra.  
+
+This is done using the **log–exp formula** in the algebra, which corresponds to the 2-point 
+barycenter in the Lie group of truncated signatures:
+
+
+    bary(a,b) = a cdot exp Big(frac{1}{2} log(a^{-1} cdot b)Big)
+
+
+# Arguments
+- `a::TruncTensorSeqElem`: first truncated tensor sequence element
+- `b::TruncTensorSeqElem`: second truncated tensor sequence element
+
+# Returns
+- `TruncTensorSeqElem`: the barycenter element of `a` and `b`.
+
+# Example
+
+d, m, k = 2, 2, 2
+R, vars = polynomial_ring_sig_transform(d, m)
+TTS = trunc_tensor_seq(R, k, m)
+x = sig_axis(TTS)[1]  # example first path
+y = sig_axis(TTS)[2]  # example second path
+bary = bary_2samples(x, y)
+"""
+bary_2samples
+
 function bary_2samples(a::TruncTensorSeqElem, b::TruncTensorSeqElem)
   return a*exp(QQ(1,2)*log(inv(a)*b))
 end
+
+
+"""
+    bary(signatures::Vector{TruncTensorSeqElem})
+
+Computes the barycenter of a list of truncated tensor sequence elements.
+
+# Example
+    R, a = polynomial_ring_sig_transform(2,1)
+    TTS = trunc_tensor_seq(R, 2, 1)
+    sigX1 = matrix_tensorSeq_congruence([1//2, 1], sig_axis(TTS))
+    sigX2 = matrix_tensorSeq_congruence([1, 1//2], sig_axis(TTS))
+    sY = bary([sigX1, sigX2])
+"""
+bary
 
 function bary(bs::Vector{TruncTensorSeqElem})
   TTSm = parent(bs[1])
@@ -481,6 +691,34 @@ function bary(bs::Vector{TruncTensorSeqElem})
   return res 
 end
 
+
+"""
+    bary_Nminus1_samples_fixed_inverse(bs::Vector{TruncTensorSeqElem}, y::TruncTensorSeqElem)
+
+Computes the barycenter of `N` truncated tensor sequence elements where the **last element `y` is fixed**, 
+by solving the polynomial system defining the barycenter in the free truncated signature algebra.  
+
+This function iteratively computes each **graded component** of the barycenter sequence 
+using the polynomials from `bary_defining_polynomial_system`, adjusting the components to satisfy 
+the barycenter condition with the fixed inverse of the last element.
+
+# Arguments
+- `bs::Vector{TruncTensorSeqElem}`: vector of the first `N-1` elements in the barycenter computation.
+- `y::TruncTensorSeqElem`: the `N`-th element which remains fixed during the computation.
+
+# Returns
+- `TruncTensorSeqElem`: the barycenter element of `[bs..., y]` satisfying the fixed-inverse constraint.
+
+# Example
+R, vars = polynomial_ring_sig_transform(2,2)
+TTS = trunc_tensor_seq(R, 3, 2)
+x1 = sig_axis(TTS)[1]
+x2 = sig_axis(TTS)[2]
+x3 = sig_axis(TTS)[3]
+bary_fixed = bary_Nminus1_samples_fixed_inverse([x1, x2], x3)
+"""
+bary_Nminus1_samples_fixed_inverse
+
 function bary_Nminus1_samples_fixed_inverse(bs::Vector{TruncTensorSeqElem},y::TruncTensorSeqElem)
   TTSm = parent(bs[1])
   res = one(TTSm)
@@ -499,10 +737,71 @@ function bary_Nminus1_samples_fixed_inverse(bs::Vector{TruncTensorSeqElem},y::Tr
   return res 
 end
 
+
+"""
+    bary_2nd_trunc(bs::Vector{TruncTensorSeqElem})
+
+Computes the **second-order barycenter** of a collection of truncated tensor sequence elements 
+`bs = [b_1, ..., b_N]` in the free truncated signature algebra.  
+
+The barycenter is computed in the **log–exp Lie algebra sense**, generalizing the 2-sample 
+barycenter to `N` elements at truncation level 2:
+
+
+bary_2(bs) = exp Big( frac{1}{N} sum_{i=1}^N log(b_i) Big)
+
+
+# Arguments
+- `bs::Vector{TruncTensorSeqElem}`: vector of truncated tensor sequence elements to average.
+
+# Returns
+- `TruncTensorSeqElem`: the second-order barycenter element.
+
+# Example
+R, vars = polynomial_ring_sig_transform(2,2)
+TTS = trunc_tensor_seq(R, 2, 2)
+x = sig_axis(TTS)[1]
+y = sig_axis(TTS)[2]
+z = sig_axis(TTS)[3]
+bary = bary_2nd_trunc([x, y, z])
+"""
+bary_2nd_trunc
+
 function bary_2nd_trunc(bs::Vector{TruncTensorSeqElem})
   N = length(bs)
   return exp(QQ(1,N)*sum(log.(bs))) 
 end
+
+"""
+    bary_2nd_trunc_closedform(bs::Vector{TruncTensorSeqElem})
+
+Computes the **second-order barycenter in closed form** for a collection of truncated tensor 
+sequence elements `bs` at truncation level 2.  
+
+This method avoids the log exp computation by explicitly computing the **first, second, and 
+second-order tensor components**:
+
+
+\text{bary}_2^\text{closed}(bs) = \bigg[ \text{level 1}, \text{level 2 vector}, \text{level 2 matrix} \bigg]
+
+
+where the matrix is corrected to account for cross terms between first-order components.
+
+# Arguments
+- `bs::Vector{TruncTensorSeqElem}`: vector of truncated tensor sequence elements.
+
+# Returns
+- `TruncTensorSeqElem`: barycenter element containing the truncated sequence `[level1, level2_vector, level2_matrix]`.
+
+# Example
+R, vars = polynomial_ring_sig_transform(2,2)
+TTS = trunc_tensor_seq(R, 2, 2)
+x = sig_axis(TTS)[1]
+y = sig_axis(TTS)[2]
+z = sig_axis(TTS)[3]
+bary_closed = bary_2nd_trunc_closedform([x, y, z])
+"""
+bary_2nd_trunc_closedform
 
 function bary_2nd_trunc_closedform(bs::Vector{TruncTensorSeqElem})
   TTSm = parent(bs[1])

@@ -40,6 +40,22 @@ end
 #############################
 # structs
 #############################
+"""
+    FreeTruncSigAlgMultiv{T <: FieldElem}
+
+Represents a free truncated multivariate signature algebra of level `trunc_level` 
+with `num_samples` sample elements. Used for barycenter computations and graded components.
+
+# Fields
+- `free_alg::FreeAssociativeAlgebra{T}`: underlying free associative algebra
+- `trunc_level::Int`: truncation level
+- `num_samples::Int`: number of sample elements
+- `with_bary::Bool`: whether the algebra includes a barycenter element
+
+# Example
+    F, s = free_trunc_sig_alg_multiv(3, 2)
+"""
+FreeTruncSigAlgMultiv
 
 struct FreeTruncSigAlgMultiv{T <:FieldElem} 
   free_alg::FreeAssociativeAlgebra{T}
@@ -53,10 +69,45 @@ truncation_level(F::FreeTruncSigAlgMultiv) = F.trunc_level
 number_of_samples(F::FreeTruncSigAlgMultiv) = F.num_samples
 with_bary(F::FreeTruncSigAlgMultiv) = F.with_bary
 
+
+"""
+    FreeTruncSigAlgMultiv{T <: FieldElem}
+
+Represents a free truncated multivariate signature algebra of level `trunc_level` 
+with `num_samples` sample elements. Used for barycenter computations and graded components.
+
+# Fields
+- `free_alg::FreeAssociativeAlgebra{T}`: underlying free associative algebra
+- `trunc_level::Int`: truncation level
+- `num_samples::Int`: number of sample elements
+- `with_bary::Bool`: whether the algebra includes a barycenter element
+
+# Example
+    F, s = free_trunc_sig_alg_multiv(3, 2)
+"""
+FreeTruncSigAlgMultivElem
+
 struct FreeTruncSigAlgMultivElem{T <: FieldElem}
   parent::FreeTruncSigAlgMultiv{T}
   elem::FreeAssociativeAlgebraElem{T}
 end
+
+"""
+    free_trunc_sig_alg_multiv(trunc_level::Int, num_samples::Int)
+    free_trunc_sig_alg_multiv(trunc_level::Int, num_samples::Int, with_bary::Bool=true)
+Constructs a `FreeTruncSigAlgMultiv` algebra and returns a tuple `(F, s)` where
+`s` is an array of `FreeTruncSigAlgMultivElem` corresponding to the sample elements.
+
+# Arguments
+- `trunc_level::Int`: truncation level
+- `num_samples::Int`: number of sample elements
+- `with_bary::Bool`: whether to include a barycenter element
+
+# Example
+    F, s = free_trunc_sig_alg_multiv(3, 2)
+    s1 = s[1,1]
+"""
+free_trunc_sig_alg_multiv
 
 function free_trunc_sig_alg_multiv(_trunc_level::Int, 
                                    _num_samples::Int,
@@ -89,6 +140,17 @@ function trunc(f::FreeAssociativeAlgebraElem,_trunc_level::Int)
   end
   return res 
 end
+
+"""
+    graded_component(f::FreeTruncSigAlgMultivElem, ell::Int)
+
+Projects the element `f` to its `ell`-th graded component according to the level grading.
+
+# Example
+    g = free_sig_bary(F) + free_sig_from_sample(1,F)
+    f1 = graded_component(g, 1)
+"""
+graded_component
 
 function graded_component(f::FreeAssociativeAlgebraElem,ell::Int,_trunc_level::Int)
   res = 0*f
@@ -131,11 +193,35 @@ function Base.zero(_T::FreeTruncSigAlgMultiv)
   return FreeTruncSigAlgMultivElem(_T,zero(_T.free_alg))
 end
 
+"""
+    free_sig_from_sample(sample_index::Int, F::FreeTruncSigAlgMultiv)
+
+Returns the `FreeTruncSigAlgMultivElem` corresponding to the `sample_index`-th sample
+element in the algebra `F`.
+
+# Example
+    F, s = free_trunc_sig_alg_multiv(3, 2)
+    s1 = free_sig_from_sample(1, F)
+"""
+free_sig_from_sample
+
 function free_sig_from_sample(sample_index::Int, F::FreeTruncSigAlgMultiv)
   s = gens_in_shape(F)
   trunc_level = truncation_level(F)
   return sum(s[i,sample_index] for i in (1:trunc_level)) + one(F)
 end 
+
+
+"""
+    free_sig_bary(F::FreeTruncSigAlgMultiv)
+
+Returns the barycenter element (`FreeTruncSigAlgMultivElem`) of the algebra `F`.
+
+# Example
+    F, s = free_trunc_sig_alg_multiv(3, 2)
+    y = free_sig_bary(F)
+"""
+free_sig_bary
 
 function free_sig_bary(F::FreeTruncSigAlgMultiv)
   s = gens_in_shape(F)
@@ -144,11 +230,44 @@ function free_sig_bary(F::FreeTruncSigAlgMultiv)
   return sum(s[i,num_samp+1] for i in (1:trunc_level)) + one(F)
 end 
 
+"""
+    gens(F::FreeTruncSigAlgMultiv)
+
+Returns the generators of the free algebra as `FreeTruncSigAlgMultivElem`s.
+
+# Example
+    F, s = free_trunc_sig_alg_multiv(3, 2)
+    G = gens(F)
+"""
+gens
+
 function Oscar.gens(F::FreeTruncSigAlgMultiv)
   free_alg = free_algebra(F)
   free_alg_gens = gens(free_alg)
   return [FreeTruncSigAlgMultivElem(F,si) for si in free_alg_gens]
 end 
+
+
+"""
+    gens_in_shape(F::FreeTruncSigAlgMultiv)
+
+Returns the **generators of a free truncated multivariate signature algebra** `F` arranged 
+in a 2-dimensional array according to truncation level and number of samples.
+
+If the algebra includes a barycenter (`F.with_bary = true`), the extra barycenter element 
+is added as an additional column.
+
+# Arguments
+- `F::FreeTruncSigAlgMultiv`: the free truncated multivariate signature algebra.
+
+# Returns
+- `Array{FreeTruncSigAlgMultivElem}`: a 2D array of generators with shape `(truncation_level, number_of_samples (+1 if bary)))`.
+
+# Example
+F, s = free_trunc_sig_alg_multiv(3, 2)  # trunc_level=3, 2 samples
+G = gens_in_shape(F)  # returns a 3x3 array if with_bary=true
+"""
+gens_in_shape
 
 function gens_in_shape(F::FreeTruncSigAlgMultiv)
   a1 = truncation_level(F)
@@ -232,6 +351,15 @@ end
 ##################
 # barycenter constructors 
 ##################
+"""
+    free_barycenter_2samples(trunc_level::Int)
+
+Computes the barycenter of 2 sample elements in the free truncated algebra.
+
+# Example
+    bary = free_barycenter_2samples(3)
+"""
+free_barycenter_2samples
 
 function free_barycenter_2samples(_trunc_level::Int)
   F,s = free_trunc_sig_alg_multiv(_trunc_level,2)
@@ -239,6 +367,16 @@ function free_barycenter_2samples(_trunc_level::Int)
   y = free_sig_from_sample(2,F)
   return x*exp(QQ(1,2)*log(inv(x)*y))
 end
+"""
+    bary_defining_polynomial_system(trunc_level::Int, num_samples::Int)
+
+Returns the polynomial system defining the barycenter of `num_samples` in the algebra.
+
+# Example
+    poly_sys = bary_defining_polynomial_system(3, 2)
+"""
+bary_defining_polynomial_system
+
 
 function bary_defining_polynomial_system(_trunc_level::Int,_num_samples::Int)
   F,s = free_trunc_sig_alg_multiv(_trunc_level,_num_samples,true) # with_bary = true

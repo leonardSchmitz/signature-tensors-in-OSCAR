@@ -26,6 +26,17 @@ function _superscript_number(i::Int)
     return '⁽'*join([superscript_digits[d + 1] for d in dgs])*'⁾'
 end
 
+"""
+    polynomial_ring_sig_transform(d::Int, m::Int)
+
+Constructs a polynomial ring `QQ[a_ij]` with `d` rows and `m` columns and returns 
+a tuple `(R, a)` where `R` is the ring and `a` is a matrix of generators.
+
+# Example
+    R, a = polynomial_ring_sig_transform(2, 3)
+"""
+polynomial_ring_sig_transform
+
 function polynomial_ring_sig_transform(_dim::Int,_order::Int)
    return  polynomial_ring(QQ, _magic_symbols_mat_a(_dim,_order))
 #   return  polynomial_ring(QQ, :a => (1:_dim,1:_order))

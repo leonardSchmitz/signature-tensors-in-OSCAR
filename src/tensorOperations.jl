@@ -7,7 +7,13 @@ export
   #Caxis_seq, 
   concatenate_tensors, 
   matrix_tensor_multiply, 
-  matrix_tensor_congruence
+  matrix_tensor_congruence, 
+
+  matrix_tensor_congruence_TA
+  concatenate_tensors_TA
+  matrix_tensor_congruence_TA
+
+
   #matrix_tensorSeq_congruence, 
   #sig_segment_standard_direction, 
   #sig_segment, 
@@ -32,7 +38,7 @@ export
   #free_barycenter, # free barycenter map   
   #poly_for_log_bary,
   #free_barycenter_2samples, 
-  #poly_for_log_bary_inverse
+  #poly_for_log_bary_invers
   
   
 
@@ -575,6 +581,55 @@ end
 ##   return 0
 ##end
 #
+
+
+
+
+
+
+
+
+function concatenate_tensors_TA(t1::AbstractArray, t2::AbstractArray)
+    # Concatenate tensors by outer product
+    reshaped_tensor1 = reshape(t1, size(t1)..., ones(Int, ndims(t2))...)
+    reshaped_tensor2 = reshape(t2, ones(Int, ndims(t1))..., size(t2)...)
+    return reshaped_tensor1 .* reshaped_tensor2
+end
+
+
+function matrix_tensor_congruence_TA(matrix::AbstractMatrix, tensor::AbstractArray)
+    k = ndims(tensor)
+    if k == 0
+        return tensor
+    end
+
+    res = tensor
+    for i in 1:k
+        res = matrix_tensor_multiply_TA(matrix, res, i)
+    end
+    return res
+end
+
+function matrix_tensor_multiply_TA(matrix::AbstractMatrix, tensor::AbstractArray, index::Int)
+    @assert 1 ≤ index ≤ ndims(tensor) "Index must be a valid axis of the tensor."
+    @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
+
+    # 1) Matric and tensor type 
+    matrix = convert.(eltype(tensor), matrix)
+
+    perm = [index; 1:index-1; index+1:ndims(tensor)]
+    tensor_perm = permutedims(tensor, perm)
+
+    reshaped_tensor = reshape(tensor_perm, size(tensor, index), :)
+    result = matrix * reshaped_tensor
+
+    result_shape = (size(matrix, 1), size(tensor)[[1:index-1; index+1:end]]...)
+    result = reshape(result, result_shape)
+
+    inv_perm = invperm(perm)
+    return permutedims(result, inv_perm)
+end
+
 
 
 

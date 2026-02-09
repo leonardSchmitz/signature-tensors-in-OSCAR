@@ -22,6 +22,24 @@ export TruncatedTensorAlgebra,
        matrix_tensor_congruence_TA,
        matrix_tensor_multiply_TA
 
+       # Signature axis functions
+       sigAxis_ClosedForm,
+       sigAxis_p2id_ClosedForm,
+       sigAxis_p2_ClosedForm,
+       sigAxis_Chen,
+       sigAxis_p2id_Chen,
+       sigAxis_p2_Chen,
+
+       # Moment functions
+       moment_path_level,
+       moment_membrane,
+       moment_membrane_p2id,
+       moment_membrane_p2,
+
+      # Tensor algebra operations
+       mode_product,
+       applyMatrixToTTA,
+       sig2parPoly
 
     
 
@@ -84,7 +102,7 @@ function tensor_sequence_constructor(A::TruncatedTensorAlgebra; is_one=true)
     elems = Vector{Any}(undef, k+1)
 
     # =========================
-    # Nivel 0 (común a todos)
+    # Level 0 (common for all Algebra)
     # =========================
     elems[1] = fill(is_one ? one(R) : zero(R), ())
 
@@ -136,18 +154,18 @@ function Base.zero(T::TruncatedTensorAlgebra)
 
     k = truncation_level(T)
     d = base_dimension(T)
-    R = base_algebra(T)   # o base_ring(T)
+    R = base_algebra(T)   # or base_ring(T)
     seq = T.sequence_type
 
     elem = Vector{Any}(undef, k + 1)
 
     ####################
-    # nivel 0 (siempre)
+    # Level 0 (always)
     ####################
     elem[1] = fill(zero(R), ())   # 0-dimensional scalar
 
     ####################
-    # niveles ≥ 1
+    # Levels ≥ 1
     ####################
     if seq == :iis
         for n in 1:k
@@ -215,7 +233,7 @@ function Oscar.evaluate(
     A = parent(bs[1])                 # algebra base
     k = truncation_level(A)           # truncation level
 
-    # evaluamos en cada nivel 0..k
+    # evaluate in every level 0..k
     res_seq = [evaluate_to_tensor_TA(p, bs, i) for i in 0:k]
 
     return TruncatedTensorAlgebraElem(A, res_seq)
@@ -223,18 +241,18 @@ end
 
 
 
-# 1) devuelve 1 del tipo correcto
+# 1) return 1 of the correct type
 function one_elem(R)
     if R === QQField
-        return QQ(1)          # elemento del campo QQ
+        return QQ(1)          # element of field QQ
     elseif R <: Type
-        return one(R)         # si R es tipo de elemento
+        return one(R)         # if R is of the element type
     else
-        return one(R)         # si R es objeto tipo anillo
+        return one(R)         # if R is of the ring type
     end
 end
 
-# 2) devuelve 0 del tipo correcto
+# 2) return 0
 function zero_elem(R)
     if R === QQField
         return QQ(0)
@@ -292,11 +310,11 @@ function sig_mono_TA(T::TruncatedTensorAlgebra{R}) where R
     # base algebra
     R0 = base_algebra(T)
 
-    # seq debe ser un Vector{Array{E}} para algún E
+    # seq must be an Vector{Array{E}} for some E
     seq = _Cmono_seqTA(k, d, R0)
 
-    # determinar E a partir de seq
-    E = eltype(seq[1])   # tipo de los elementos del array interno
+    # determinate E using seq
+    E = eltype(seq[1])   # type of the elements of the intern array
     TruncatedTensorAlgebraElem{R, E}(T, seq)
 
 
@@ -304,17 +322,39 @@ function sig_mono_TA(T::TruncatedTensorAlgebra{R}) where R
 end
 
 
+
 function Base.getindex(x::TruncatedTensorAlgebraElem, w...)
     k=length(w)
+    b=parent(x)
+    typeT=b.sequence_type
     if k < 0
         throw(BoundsError(x, k))
     end
+    
     if k > length(x.elem)
         throw(BoundsError(x, k))
     end
-    temp= x.elem[k+1 ]
+    if typeT==:iis 
+        temp= x.elem[k+1 ]
+    elseif typeT==:p2
+        if k==1
+            temp=x.elem[k+1]
+        else
+            temp=x.elem[k]
+        end
+    elseif typeT==:p2id
+        if k==1
+            temp=x.elem[k+1]
+        else
+            temp=x.elem[k]
+        end
+    else 
+        error("seq must be one of :iis, :p2id, :p2")
+    end
+    
     return temp[w...]
 end
+
 
 function Base.vec(x::TruncatedTensorAlgebraElem)
     return vcat([vec(xi) for xi in x.elem]...)
@@ -332,13 +372,13 @@ end
 # congruence for matrices
 # ----------------------------
 # ------------------------------------------------------------
-# helper: obtener el anillo padre de un elemento (tipo Oscar)
+# helper: obtain the father ring of an element 
 # ------------------------------------------------------------
 ring_of(::Type{T}) where T = parent(one(T))
 ring_of(x) = ring_of(typeof(x))
 
 # ------------------------------------------------------------
-# common_ring: cumple exactamente tu regla
+# common_ring: verify the rule
 # ------------------------------------------------------------
 function common_ring(R_tensor, R_matrix)
     if R_matrix isa MPolyRing
@@ -361,24 +401,22 @@ function matrix_tensorAlg_congruence_TA(
     @assert m == size(matrix, 2)
     d = size(matrix, 1)
 
-    # Anillos
+    # Ring
     R_tensor = base_ring(T)
 
-    # Aquí está la corrección:
-    # el ring real del que provienen los elementos de la matriz
     R_matrix = parent(matrix[1,1])
 
-    # Regla simple
+    # Simple Rule 
     Rnew = common_ring(R_tensor, R_matrix)
 
-    # Nuevo álgebra
+    # New Algebra 
     Tnew = TruncatedTensorAlgebra(Rnew, d, k, :iis)
 
-    # Convertir tensores al nuevo anillo
+    # Convert tensor in the new Ring
     tensorSeq = tensor_sequence(b)
     tensorSeq = [map(x -> Rnew(x), t) for t in tensorSeq]
 
-    # Aplicar congruencia
+    # Apply congruence
     resSeq = [
         matrix_tensor_congruence_TA(map(x -> Rnew(x), matrix), t)
         for t in tensorSeq
@@ -389,7 +427,7 @@ end
 
 
 # ----------------------------
-# congruencia para vectores
+# congruence for vectors (treat as 1×d matrices)
 # ----------------------------
 function matrix_tensorAlg_congruence_TA(
     v::AbstractVector,
@@ -400,32 +438,32 @@ function matrix_tensorAlg_congruence_TA(
 end
 
 function sig_segment_TA(T::TruncatedTensorAlgebra{R}, v::Vector{E}) where {R,E}
-    # --- validaciones ---
+    # --- validation---
     k = truncation_level(T)
     d = ambient_dimension(T)
 
     @assert length(v) == d "dimensions do not match"
 
-    # --- aseguramos que el tipo del elemento concuerde con el anillo ---
+    # --- veryfy the types---
     @assert typeof(v[1]) <: E "element types do not match"
 
-    # --- creamos un algebra nuevo de dimensión 1 ---
+    # --- create a new algebra ---
     T1 = TruncatedTensorAlgebra(base_ring(T), 1, k, :iis)
 
-    # --- signature mono en dimensión 1 ---
+    # --- signature mono in dimension 1 ---
     C = sig_mono_TA(T1)
 
-    # --- convierte el vector v en matriz columna d×1 ---
+    # --- Convert the vector v in a column matrix d×1 ---
     v_mat = reshape(v, d, 1)
 
-    # --- aplica la congruencia matricial (matriz columna * signature 1D) ---
+    # --- Apply the matricial congruence (column matrix* signature 1D) ---
     return matrix_tensorAlg_congruence_TA(v_mat, C)
 end
 
 
 function sig_segment_standard_direction_TA(T::TruncatedTensorAlgebra{R}, _i::Int) where {R}
     d = ambient_dimension(T)
-    # vector one-hot en la dirección _i
+    # vector one-hot in the direction _i
     v = _one_hot_TA(_i, d, R)
     return sig_segment_TA(T, v)
 end
@@ -438,10 +476,10 @@ function Base.:*(a::R, b::TruncatedTensorAlgebraElem{R,E}) where {R,E}
 
     res_seq = tensor_sequence(b)
 
-    # escala el primer nivel
+    # first level 
     res_seq[1][] = a * res_seq[1][]
 
-    # escala todos los niveles
+    # all other levels
     for j in 2:k+1
         res_seq[j] = a .* res_seq[j]
     end
@@ -468,7 +506,7 @@ function Base.:*(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
     if T.sequence_type == :iis
             return matrix_tensorAlg_congruence_TA(matrix, x)
     else
-                throw(ArgumentError("matrix * TruncatedTensorAlgebraElem solo definido para sequence_type = :iis"))
+                throw(ArgumentError("matrix * TruncatedTensorAlgebraElem ony defined for sequence_type = :iis"))
     end
 
 end
@@ -486,7 +524,7 @@ end
 
 
 function concatenate_tensors_TA(t1::AbstractArray, t2::AbstractArray)
-    # Concatenate tensors by outer product (como antes)
+    # Concatenate tensors by outer product
     reshaped_tensor1 = reshape(t1, size(t1)..., ones(Int, ndims(t2))...)
     reshaped_tensor2 = reshape(t2, ones(Int, ndims(t1))..., size(t2)...)
     return reshaped_tensor1 .* reshaped_tensor2
@@ -527,30 +565,30 @@ function evaluate_to_tensor_TA(
 
     bs = deepcopy(_bs)
 
-    # caso base: nivel 0
+    # Level 0
     if index == 0
-        res = tensor_sequence(bs[1])[1]   # nivel 0
+        res = tensor_sequence(bs[1])[1]   # Level 0
         res[] = leading_coefficient_and_zero_TA(
                   FreeTruncSigAlgMultivElem_to_polynomial(graded_component(p, 0))
                ) * one(res[])
         return res
     end
 
-    # datos del espacio
+    # data of the space
     num_vars = length(bs)
     A = parent(bs[1])
     k = truncation_level(A)
 
-    # componente grado index de p
+    # Component grade index of p
     fi = FreeTruncSigAlgMultivElem_to_polynomial(graded_component(p, index))
 
-    # secuencia de tensores niveles 1..k
+    # Sequence of tensor of livels 1..k
     seq_tensor_seq = [tensor_sequence(b)[2:k+1] for b in bs]
 
-    # tensor resultado (tamaño correcto)
+    # Tensor result (Right size)
     res = zero(seq_tensor_seq[1][index])
 
-    # evaluar término a término
+    # Evaluate Term to Term
     for t in 1:length(fi)
         fit = collect(terms(fi))[t]
 
@@ -583,7 +621,7 @@ function evaluate_TA(
     A = parent(bs[1])                     # algebra base
     k = truncation_level(A)               # truncation level
     
-    # Evaluamos en cada nivel 0..k
+    # Evaluation for every level 0..k
     res_seq = [evaluate_to_tensor_TA(p, bs, i) for i in 0:k]
 
     return TruncatedTensorAlgebraElem(parent(bs[1]), res_seq)
@@ -609,7 +647,6 @@ function combinations_with_replacement(iter, k)
         end
     end
 
-    backtrack(1, 1)
     return res
 end
 
@@ -624,21 +661,21 @@ function sigAxis_TA_ClosedForm(T::TruncatedTensorAlgebra)
     d = base_dimension(T)
     k = truncation_level(T)
 
-    E = typeof(one(R))                 # tipo del elemento
+    E = typeof(one(R))                 # tipe of the element
     elem_out = Vector{Array{E}}(undef, k+1)
 
     # ======================
-    # Nivel 0 (tensor 0-dimensional)
+    # Level 0 (tensor 0-dimensional)
     # ======================
     elem_out[1] = fill(one(R), ())    # array 0-dimensional
 
     # ======================
-    # Nivel 1
+    # Level 1
     # ======================
     elem_out[2] = fill(one(R), d)
 
     # ======================
-    # Niveles >= 2
+    # Levels >= 2
     # ======================
     for j in 2:k
         dims = ntuple(_ -> d, j)
@@ -675,25 +712,25 @@ function sig_axis_TA(T::TruncatedTensorAlgebra{R}) where R
     k = truncation_level(T)
     d = ambient_dimension(T) 
 
-    # 1) creamos los d segmentos estándar (direcciones base)
+    # 1) Create the d standard segments  ( base direction)
     sample = [sig_segment_standard_direction_TA(T, i) for i in 1:d]
 
-    # 2) creamos el free truncated multivariate algebra
+    # 2) create the free truncated multivariate algebra
     F, s = free_trunc_sig_alg_multiv(k, d)
 
-    # 3) chen product: multiplicación de los generadores 1..d
+    # 3) chen product: Multiplication the generators 1..d
     chen = prod([free_sig_from_sample(i, F) for i in 1:d])
 
-    # 4) evaluación
+    # 4) evaluation
     return evaluate_TA(chen, sample)
 end
 
 
 function sig_poly_TA(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where R
-    # 1) Obtener moment path (sig_mono_TA)
+    # 1) Obtain moment path (sig_mono_TA)
     mono_path = sig_mono_TA(T)
 
-    # 2) Aplicar coeficientes con congruencia matricial
+    # 2) Apply coeficients with matricial congruence
     poly_path = matrix_tensorAlg_congruence_TA(coeffs, mono_path)
 
     return poly_path
@@ -701,10 +738,10 @@ end
 
 
 function sig_pwln_TA_Congruence(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where R
-    # 1) Obtener moment path (sig_mono_TA)
+    # 1) Obtain moment path (sig_mono_TA)
     mono_path = sig_axis_TA(T)
 
-    # 2) Aplicar coeficientes con congruencia matricial
+    # 2) Apply coeficients with matricial congruence
     poly_path = matrix_tensorAlg_congruence_TA(coeffs, mono_path)
 
     return poly_path
@@ -719,38 +756,6 @@ function sig_pwl_TA_chen(T::TruncatedTensorAlgebra{R}, P::AbstractMatrix{E}) whe
     return prod(seg_sigs)
 end
 
-function matrix_tensor_multiply_TA(matrix::AbstractMatrix, tensor::AbstractArray, index::Int)
-    @assert 1 ≤ index ≤ ndims(tensor) "Index must be a valid axis of the tensor."
-    @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
-
-    # 1) Asegurar que matrix esté en el mismo anillo que el tensor
-    matrix = convert.(eltype(tensor), matrix)
-
-    perm = [index; 1:index-1; index+1:ndims(tensor)]
-    tensor_perm = permutedims(tensor, perm)
-
-    reshaped_tensor = reshape(tensor_perm, size(tensor, index), :)
-    result = matrix * reshaped_tensor
-
-    result_shape = (size(matrix, 1), size(tensor)[[1:index-1; index+1:end]]...)
-    result = reshape(result, result_shape)
-
-    inv_perm = invperm(perm)
-    return permutedims(result, inv_perm)
-end
-
-function matrix_tensor_congruence_TA(matrix::AbstractMatrix, tensor::AbstractArray)
-    k = ndims(tensor)
-    if k == 0
-        return tensor
-    end
-
-    res = tensor
-    for i in 1:k
-        res = matrix_tensor_multiply_TA(matrix, res, i)
-    end
-    return res
-end
 
 
 function matrix_tensorAlg_congruence_TA(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
@@ -802,7 +807,7 @@ function Base.:*(a::FieldElem, b::TruncatedTensorAlgebraElem)
         k = truncation_level(A)
         res_seq = tensor_sequence(b)
 
-        res_seq[1][] = a * res_seq[1][]        # nivel 0
+        res_seq[1][] = a * res_seq[1][]        # Level 0
         for j in 2:k+1
             res_seq[j] = a .* res_seq[j]
         end
@@ -876,6 +881,546 @@ function Base.:log(a::TruncatedTensorAlgebraElem)
     end
 end
 
+
+
+
+
+
+# -------------------------------
+# Principal function (dispatch)
+# -------------------------------
+function sigAxis_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    if m * n != ambient_dimension(T)
+        error("m * n != d")
+    end
+
+    if T.sequence_type == :p2id
+        return sigAxis_p2id_ClosedForm(T, m, n)
+    elseif T.sequence_type == :p2
+        return sigAxis_p2_ClosedForm(T, m, n)
+    else
+        error("sequence_type must be :p2id or :p2")
+    end
+end
+
+
+# -------------------------------
+# seq_type == :p2id
+# -------------------------------
+function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    k = truncation_level(T)
+    
+    if m * n != d
+        error("m * n != d")
+    end
+
+    Tm = TruncatedTensorAlgebra(base_algebra(T), m, k, :iis)
+    Tn = TruncatedTensorAlgebra(base_algebra(T), n, k, :iis)
+
+    sig_m = sigAxis_TA_ClosedForm(Tm)
+    sig_n = sigAxis_TA_ClosedForm(Tn)
+
+    elem_out = Vector{Array{eltype(sig_m.elem[2])}}(undef, k)
+
+    for j in 1:k
+        σ_m = sig_m.elem[j+1]
+        σ_n = sig_n.elem[j+1]
+
+        tensor_j = Array{eltype(σ_m)}(undef, ntuple(_ -> m*n, j)...)
+
+        for idx in CartesianIndices(tensor_j)
+            linear_idx = Tuple(idx)
+
+            idx_m = ntuple(t -> (div(linear_idx[t]-1, n) % m) + 1, j)
+            idx_n = ntuple(t -> (mod(linear_idx[t]-1, n) + 1), j)
+
+            tensor_j[idx] = σ_m[idx_m...] * σ_n[idx_n...]
+        end
+
+        elem_out[j] = tensor_j
+    end
+
+    return TruncatedTensorAlgebraElem{R, eltype(sig_m.elem[2])}(T, elem_out)
+end
+
+
+# -------------------------------
+# seq_type == :p2
+# -------------------------------
+function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    k = truncation_level(T)
+    d=ambient_dimension(T)
+
+    if m * n != d
+        error("m * n != d")
+    end
+
+
+    Tm = TruncatedTensorAlgebra(base_algebra(T), m, k, :iis)
+    Tn = TruncatedTensorAlgebra(base_algebra(T), n, k, :iis)
+
+    sig_m = sigAxis_TA_ClosedForm(Tm)
+    sig_n = sigAxis_TA_ClosedForm(Tn)
+
+    elem_out = Vector{Any}(undef, k+1)
+
+    # ─────────────────────────────
+    # Level 0: copy directly
+    # ─────────────────────────────
+    elem_out[1] = sig_m.elem[1]
+
+    # ─────────────────────────────
+    # Level ≥ 1
+    # ─────────────────────────────
+    for j in 1:(k)
+        σ_m = sig_m.elem[j+1]
+        σ_n = sig_n.elem[j+1]
+
+        perms = Combinatorics.permutations(1:j)
+
+        tensor_j = Array{eltype(σ_m)}(
+            undef,
+            (ntuple(_ -> m*n, j)..., factorial(j))
+        )
+
+        total = (m*n)^j
+        perm_idx = 1
+
+        for perm in perms
+            for lin in 1:total
+                # multi-índice in {1,…,m*n}^j
+                linear_idx = ntuple(
+                    t -> ((lin - 1) ÷ (m*n)^(t-1)) % (m*n) + 1,
+                    j
+                )
+
+                # separate index m / n
+                idx_m = ntuple(
+                    t -> (div(linear_idx[t] - 1, n) % m) + 1,
+                    j
+                )
+
+                idx_n = ntuple(
+                    t -> (mod(linear_idx[t] - 1, n) + 1),
+                    j
+                )
+
+                idx_n_perm = ntuple(t -> idx_n[perm[t]], j)
+
+                tensor_j[linear_idx..., perm_idx] =
+                    σ_m[idx_m...] * σ_n[idx_n_perm...]
+            end
+            perm_idx += 1
+        end
+
+        elem_out[j+1] = tensor_j
+    end
+    
+    return TruncatedTensorAlgebraElem{R, eltype(sig_m.elem[2])}(T, elem_out)
+end
+
+
+
+# -------------------------------
+# Principal function (dispatch)
+# -------------------------------
+function sigAxis_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    if m * n != ambient_dimension(T)
+        error("m * n != d")
+    end
+
+    if T.sequence_type == :p2id
+        return sigAxis_p2id_Chen(T, m, n)
+    elseif T.sequence_type == :p2
+        return sigAxis_p2id_Chen(T, m, n)
+    else
+        error("sequence_type must be :p2id or :p2")
+    end
+end
+
+
+# -------------------------------
+# seq_type == :p2id
+# -------------------------------
+function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    k = truncation_level(T)
+    
+    if m * n != d
+        error("m * n != d")
+    end
+
+    Tm = TruncatedTensorAlgebra(base_algebra(T), m, k, :iis)
+    Tn = TruncatedTensorAlgebra(base_algebra(T), n, k, :iis)
+
+    
+    sig_m = sig_axis_TA(Tm)
+    sig_n = sig_axis_TA(Tn)
+
+    elem_out = Vector{Array{eltype(sig_m.elem[2])}}(undef, k)
+
+    for j in 1:k
+        σ_m = sig_m.elem[j+1]
+        σ_n = sig_n.elem[j+1]
+
+        tensor_j = Array{eltype(σ_m)}(undef, ntuple(_ -> m*n, j)...)
+
+        for idx in CartesianIndices(tensor_j)
+            linear_idx = Tuple(idx)
+
+            idx_m = ntuple(t -> (div(linear_idx[t]-1, n) % m) + 1, j)
+            idx_n = ntuple(t -> (mod(linear_idx[t]-1, n) + 1), j)
+
+            tensor_j[idx] = σ_m[idx_m...] * σ_n[idx_n...]
+        end
+
+        elem_out[j] = tensor_j
+    end
+
+    return TruncatedTensorAlgebraElem{R, eltype(sig_m.elem[2])}(T, elem_out)
+end
+
+
+# -------------------------------
+# seq_type == :p2
+# -------------------------------
+function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    k = truncation_level(T)
+    d=ambient_dimension(T)
+
+    if m * n != d
+        error("m * n != d")
+    end
+
+
+    Tm = TruncatedTensorAlgebra(base_algebra(T), m, k, :iis)
+    Tn = TruncatedTensorAlgebra(base_algebra(T), n, k, :iis)
+
+    sig_m = sig_axis_TA(Tm)
+    sig_n = sig_axis_TA(Tn)
+
+    elem_out = Vector{Any}(undef, k+1)
+
+    # ─────────────────────────────
+    # Level 0: copy directly
+    # ─────────────────────────────
+    elem_out[1] = sig_m.elem[1]
+
+    # ─────────────────────────────
+    # Level ≥ 1
+    # ─────────────────────────────
+    for j in 1:(k)
+        σ_m = sig_m.elem[j+1]
+        σ_n = sig_n.elem[j+1]
+
+        perms = Combinatorics.permutations(1:j)
+
+        tensor_j = Array{eltype(σ_m)}(
+            undef,
+            (ntuple(_ -> m*n, j)..., factorial(j))
+        )
+
+        total = (m*n)^j
+        perm_idx = 1
+
+        for perm in perms
+            for lin in 1:total
+                # multi-índice in {1,…,m*n}^j
+                linear_idx = ntuple(
+                    t -> ((lin - 1) ÷ (m*n)^(t-1)) % (m*n) + 1,
+                    j
+                )
+
+                # separate index m / n
+                idx_m = ntuple(
+                    t -> (div(linear_idx[t] - 1, n) % m) + 1,
+                    j
+                )
+
+                idx_n = ntuple(
+                    t -> (mod(linear_idx[t] - 1, n) + 1),
+                    j
+                )
+
+                idx_n_perm = ntuple(t -> idx_n[perm[t]], j)
+
+                tensor_j[linear_idx..., perm_idx] =
+                    σ_m[idx_m...] * σ_n[idx_n_perm...]
+            end
+            perm_idx += 1
+        end
+
+        elem_out[j+1] = tensor_j
+    end
+    
+    return TruncatedTensorAlgebraElem{R, eltype(sig_m.elem[2])}(T, elem_out)
+end
+
+
+# ==============================================================
+# Moment path at level j (shared helper)
+# ==============================================================
+"""
+    moment_path_level(R::QQMPolyRing, d::Int, j::Int)
+
+Constructs the moment tensor of level `j` for dimension `d` over the ring `R`.
+Each multi-index entry is numerator / denominator * one(R), 
+with numerator = prod(indices) and denominator = prod(cumsum(indices)).
+"""
+function moment_path_level(R::QQMPolyRing, d::Int, j::Int)
+    dims = ntuple(_ -> d, j)
+    T = Array{QQMPolyRingElem}(undef, dims...)
+
+    for idx in Iterators.product(ntuple(_ -> 1:d, j)...)
+        idx_vec = collect(idx)
+        numerator = prod(idx_vec)
+        denominator = prod(cumsum(idx_vec))
+        T[idx...] = QQ(numerator, denominator) * one(R)
+    end
+
+    return T
+end
+
+# ==============================================================
+# Moment membrane for :p2id
+# ==============================================================
+"""
+    moment_membrane_p2id(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
+
+Compute the moment tensors for a TruncatedTensorAlgebra of sequence type `:p2id`.
+Returns a new TTA object with `elem[j]` filled for all levels up to `truncation_level`.
+"""
+function moment_membrane_p2id(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
+    R = TTA.base_ring
+    k = TTA.truncation_level
+    d = TTA.ambient_dimension
+
+    if m * n != d
+        error("m * n must equal the ambient dimension of TTA")
+    end
+
+    TTA_out = TruncatedTensorAlgebra(
+        R, d, k, :p2id
+    )
+    TTA_out.elem = Vector{Any}(undef, k)
+
+    for j in 1:k
+        σ_m = moment_path_level(R, m, j)
+        σ_n = moment_path_level(R, n, j)
+
+        dims = ntuple(_ -> m*n, j)
+        tensor_j = Array{QQMPolyRingElem}(undef, dims...)
+
+        # Fill tensor with direct product of σ_m and σ_n
+        for idx in Iterators.product(ntuple(_ -> 1:(m*n), j)...)
+            idx_m = [(div(i-1, n) % m) + 1 for i in idx]
+            idx_n = [(mod(i-1, n) + 1) for i in idx]
+            tensor_j[idx...] = σ_m[idx_m...] * σ_n[idx_n...]
+        end
+
+        TTA_out.elem[j] = tensor_j
+    end
+
+    return TTA_out
+end
+
+# ==============================================================
+# Moment membrane for :p2
+# ==============================================================
+"""
+    moment_membrane_p2(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
+
+Compute the moment tensors for a TruncatedTensorAlgebra of sequence type `:p2`.
+Returns a new TTA object with `elem[j]` filled for all levels up to `truncation_level`.
+"""
+function moment_membrane_p2(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
+    R = TTA.base_ring
+    k = TTA.truncation_level
+    d = TTA.ambient_dimension
+
+    if m * n != d
+        error("m * n must equal the ambient dimension of TTA")
+    end
+
+    TTA_out = TruncatedTensorAlgebra(
+        R, d, k, :p2
+    )
+    TTA_out.elem = Vector{Any}(undef, k)
+
+    for j in 1:k
+        σ_m = moment_path_level(R, m, j)
+        σ_n = moment_path_level(R, n, j)
+
+        perms = collect(Combinatorics.permutations(1:j))
+        tensor_j = Array{QQMPolyRingElem}(undef, (ntuple(_ -> m*n, j)..., factorial(j)))
+
+        # Loop over permutations
+        for (perm_idx, perm) in enumerate(perms)
+            σ_n_perm = Array{QQMPolyRingElem}(undef, size(σ_n)...)
+            for idx in Iterators.product(ntuple(_ -> 1:n, j)...)
+                idx_perm = idx[perm]
+                σ_n_perm[idx...] = σ_n[idx_perm...]
+            end
+
+            for idx in Iterators.product(ntuple(_ -> 1:(m*n), j)...)
+                idx_m = [(div(i-1, n) % m) + 1 for i in idx]
+                idx_n = [(mod(i-1, n) + 1) for i in idx]
+                tensor_j[idx..., perm_idx] = σ_m[idx_m...] * σ_n_perm[idx_n...]
+            end
+        end
+
+        TTA_out.elem[j] = tensor_j
+    end
+
+    return TTA_out
+end
+
+# ==============================================================
+# Optional dispatch by seq_type
+# ==============================================================
+function moment_membrane(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
+    if TTA.seq_type == :p2id
+        return moment_membrane_p2id(TTA, m, n)
+    elseif TTA.seq_type == :p2
+        return moment_membrane_p2(TTA, m, n)
+    else
+        error("sequence_type must be :p2id or :p2")
+    end
+end
+
+"""
+    mode_product(T::AbstractArray, A::AbstractMatrix, mode::Int, R)
+
+Compute the mode-n product of tensor `T` with matrix `A` along the specified `mode`.
+
+- `T` : input tensor of any order (dimensions can be for p2id or p2)
+- `A` : matrix of size (d_new × d) to multiply along the `mode` dimension
+- `mode` : the axis along which to multiply
+- `R` : base ring for elements (e.g., QQMPolyRing)
+
+Returns a new tensor with dimension `d_new` along the `mode` axis.
+- If `T` is a level-1 tensor from TruncatedTensorAlgebra, multiplies a vector of ones.
+- For higher levels, performs a linear transformation along the selected mode.
+"""
+function mode_product(T::AbstractArray, A::AbstractMatrix, mode::Int, R)
+    d_new, d = size(A)
+
+    # Check that mode dimension matches
+    dims = size(T)
+    dims[mode] == d || error("Mode $mode has size $(dims[mode]), expected $d")
+
+    # Convert A to base ring elements
+    A_ring = reshape([one_elem(R) * a for a in A], size(A))
+
+    # Move the mode-th axis to the first dimension
+    perm = (mode, setdiff(1:ndims(T), mode)...)
+    T_perm = permutedims(T, perm)
+
+    # Matricize tensor: mode dimension becomes rows
+    T_mat = reshape(T_perm, d, :)
+
+    # Multiply matrix by tensor matricization
+    T_out_mat = A_ring * T_mat   # Linear transform along mode
+
+    # Reshape back to tensor with new mode dimension
+    new_dims = (d_new, dims[1:mode-1]..., dims[mode+1:end]...)
+    T_out = reshape(T_out_mat, new_dims)
+
+    # Permute axes back to original order
+    invp = invperm(perm)
+    return permutedims(T_out, invp)
+end
+
+"""
+    applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
+
+Applies a linear transformation `A` to all levels of a truncated tensor algebra `X`
+by mode-product along all modes. Handles both `:p2id` and `:p2` signatures.
+
+- `A` : matrix of size (d_new × d), linear transformation
+- `X` : input truncated tensor algebra
+Returns a **new** TruncatedTensorAlgebra with updated ambient dimension `d_new`.
+"""
+function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
+    d_new, d = size(A)
+    d == X.ambient_dimension || error("size(A,2) must match ambient dimension")
+
+    R = X.base_ring
+    k = X.truncation_level
+    seq_type = X.seq_type
+
+    # Create new TTA with updated ambient dimension
+    X_new = TruncatedTensorAlgebra(R, d_new, k, seq_type=seq_type)
+
+    for j in 1:k
+        T = X.tensor_sequence[j]
+
+        # Level 0 (scalar one) remains the same
+        if T === one_elem(R)
+            X_new.tensor_sequence[j] = T
+            continue
+        end
+
+        if seq_type == :p2id
+            # For p2id, apply mode-product along all modes
+            for mode in 1:j
+                T = mode_product(T, A, mode, R)
+            end
+        elseif seq_type == :p2
+            # For p2, we must account for permutations
+            perms = collect(Combinatorics.permutations(1:j))
+            T_perm = Array{typeof(one_elem(R))}(undef, (ntuple(_ -> d_new, j)..., factorial(j)))
+
+            for (perm_idx, perm) in enumerate(perms)
+                T_temp = similar(T)
+                # permute indices
+                for idx in Iterators.product(ntuple(_ -> 1:size(T,1), j)...)
+                    idx_perm = idx[perm]
+                    T_temp[idx...] = T[idx_perm...]
+                end
+                # apply mode-product along all modes
+                for mode in 1:j
+                    T_temp = mode_product(T_temp, A, mode, R)
+                end
+                T_perm[:, :, :, perm_idx] = T_temp  # last axis stores permutations
+            end
+            T = T_perm
+        else
+            error("seq_type must be :p2 or :p2id")
+        end
+
+        X_new.tensor_sequence[j] = T
+    end
+
+    return X_new
+end
+
+
+"""
+    sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
+
+Given a truncated tensor algebra `T` (seq_type `:p2id` or `:p2`), and a matrix of coefficients `a`,
+constructs the **moment membrane tensor** in the algebra of `T`, and then applies the matrix `a`
+via matrix-tensor congruence. Returns a **new** truncated tensor algebra with updated ambient dimension.
+
+- `T` : input truncated tensor algebra
+- `a` : coefficient matrix (d_new × d)
+"""
+function sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
+    d_new, d = size(a)
+    d == T.ambient_dimension || error("size(a,2) must match T.ambient_dimension")
+
+    R = T.base_ring
+    k = T.truncation_level
+    seq_type = T.seq_type
+
+    # Step 1: Build moment membrane tensor in same algebra as T
+    T_moment = momentMembraneTensor(T)   # <-- returns TruncatedTensorAlgebra with same algebra
+
+    # Step 2: Apply matrix-tensor congruence using a
+    T_new = applyMatrixToTTA(a, T_moment)
+
+    return T_new
+end
 
 
 

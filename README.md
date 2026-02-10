@@ -4,10 +4,6 @@
 
 **Authors**
 
-- **Carlos Amendola**  
-  TU Berlin, Algebraic and Geometric Methods in Data Analysis, Berlin  
-  Email: [amendola[at]math.tu-berlin.de](mailto:amendola@math.tu-berlin.de)
-
 - **Gabriel Riffo**  
   TU Berlin, Algebraic and Geometric Methods in Data Analysis, Berlin  
   Email: [riffo[at]tu-berlin.de](mailto:riffo@tu-berlin.de)

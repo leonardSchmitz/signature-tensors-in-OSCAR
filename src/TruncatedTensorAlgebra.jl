@@ -147,26 +147,27 @@ end
 
 #### Base Constructor
 
-function Base.zero(T::TruncatedTensorAlgebra)
+function Base.zero(T::TruncatedTensorAlgebra{R}) where R
 
     k = truncation_level(T)
     d = base_dimension(T)
-    R = base_algebra(T)   # or base_ring(T)
+    RA = base_algebra(T)   # or base_ring(T)
     seq = T.sequence_type
+    E = typeof(one(RA))
 
-    elem = Vector{Any}(undef, k + 1)
+    elem = Vector{Array{E}}(undef, k + 1)
 
     ####################
     # Level 0 (always)
     ####################
-    elem[1] = fill(zero(R), ())   # 0-dimensional scalar
+    elem[1] = fill(zero(RA), ())   # 0-dimensional scalar
 
     ####################
     # Levels ≥ 1
     ####################
     if seq == :iis
         for n in 1:k
-            elem[n + 1] = zeros(R, ntuple(_ -> d, n)...)
+            elem[n + 1] = zeros(RA, ntuple(_ -> d, n)...)
         end
 
     elseif seq == :p2id
@@ -176,7 +177,7 @@ function Base.zero(T::TruncatedTensorAlgebra)
             else
                 dims = ntuple(_ -> d, n)
             end
-            elem[n + 1] = zeros(R, dims...)
+            elem[n + 1] = zeros(RA, dims...)
         end
 
     elseif seq == :p2
@@ -186,14 +187,14 @@ function Base.zero(T::TruncatedTensorAlgebra)
             else
                 dims = (ntuple(_ -> d, n)..., factorial(n))
             end
-            elem[n + 1] = zeros(R, dims...)
+            elem[n + 1] = zeros(RA, dims...)
         end
 
     else
         throw(ArgumentError("zero(T) not implemented for sequence_type = $seq"))
     end
 
-    return TruncatedTensorAlgebraElem(T, elem)
+    return TruncatedTensorAlgebraElem{R,E}(T, elem)
 end
 
 

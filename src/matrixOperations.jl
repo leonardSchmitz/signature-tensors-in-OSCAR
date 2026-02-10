@@ -41,7 +41,7 @@ end
 
 function QQMatrixQ(d::Int)
   return diagonal_matrix([(-one(QQ))^(i+1) for i in (1:d)])
-end 
+end
 
 function generic_transform_GL(_d,_max_int=10)
    A = QQ.(rand(-1*_max_int:_max_int, _d, _d))

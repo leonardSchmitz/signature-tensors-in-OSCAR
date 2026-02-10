@@ -8,6 +8,7 @@ export TruncatedTensorAlgebra,
        tensor_sequence,
        zero,
        one,
+       sig, # TODO: implement me 
        sig_mono_TA,     # soon removed from the export 
        sigAxis_TA_ClosedForm, # sr
        sig_axis_TA, # sr
@@ -26,7 +27,7 @@ export TruncatedTensorAlgebra,
        sigAxis_p2id_Chen,  # sr
        sigAxis_p2_Chen,  # sr
 
-       # Moment functions
+       #Moment functions, 
        moment_path_level,  # sr
        moment_membrane,  # sr
        moment_membrane_p2id,  # sr
@@ -211,6 +212,14 @@ function Base.one(T::TruncatedTensorAlgebra{R}) where R
         throw(ArgumentError("one(T) is only defined for sequence_type = :iis"))
     end
 end
+
+function sig(T::TruncatedTensorAlgebra{R},
+             path_type::Symbol; 
+             coef::Array{E}=E[], 
+             algorithm::Symbol=:default) where E
+    return zero(T) # TODO: implement me
+end
+
 
 function Base.show(io::IO, x::TruncatedTensorAlgebraElem)
     for (i, t) in enumerate(x.elem)

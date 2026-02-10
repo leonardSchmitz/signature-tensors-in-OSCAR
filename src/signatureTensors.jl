@@ -1,4 +1,4 @@
-module signatureTensors
+module SignatureTensors
 
 using Oscar;
 
@@ -9,7 +9,7 @@ include("tensorOperations.jl")
 include("FreeTruncSigAlgMultiv.jl")
 include("TruncTensorSeq.jl")           # to be removed soon 
 include("matrixOperations.jl")
-include("TruncatedTensorAlgebra")
+include("TruncatedTensorAlgebra.jl")
 
 
 end 

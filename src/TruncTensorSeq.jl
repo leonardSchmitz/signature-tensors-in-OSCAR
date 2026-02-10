@@ -14,7 +14,8 @@ export
   ideal_of_entries, 
   embedding_matrix, # should not be exported
   coreSplineTrafo, # should not be exported 
-  sig_pw_mono, 
+  sig_pw_mono,
+  sig_pw_mono_ALS26, 
   generate_lyndon_words, # should not be here
   dim_free_nil_lie_alg, # should not be here
   ideal_of_lyndon_entries
@@ -271,10 +272,16 @@ function sig_axis(TTS::TruncTensorSeq)
   k = truncation_level(TTS) 
   d = ambient_dimension(TTS)
   R = base_ring(TTS)
-  sample = [sig_segment_standard_direction(TTS,i) for i in (1:d)]
-  F,s = free_trunc_sig_alg_multiv(k,d)
-  chen = prod([free_sig_from_sample(i,F) for i in (1:d)])
-  return evaluate(chen,sample) #TODO: this should be the same as multiplication of the signatuers directly, without fromal chen and eval 
+  res = sig_segment_standard_direction(TTS,1) 
+  for i in (2:d)
+    res = res*sig_segment_standard_direction(TTS,i) 
+  end 
+  return res
+  #sample = [sig_segment_standard_direction(TTS,i) for i in (1:d)]
+  #return prod(sample)
+  #F,s = free_trunc_sig_alg_multiv(k,d)
+  #chen = prod([free_sig_from_sample(i,F) for i in (1:d)])
+  #return evaluate(chen,sample) #TODO: this should be the same as multiplication of the signatuers directly, without fromal chen and eval 
 end
 
 function embedding_matrix(m::Vector{Int},i::Int)
@@ -350,13 +357,75 @@ function sig_pw_mono(TTS::TruncTensorSeq,m,r=0)
   if d != sum(m) - r*(length(m) -1)
     error("m must be a composition of the ambient dimension") 
   end 
-  sigs = [matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) for i in (1:length(m))]
-  res = prod(sigs)
+  res = matrix_tensorSeq_congruence(Array(embedding_matrix(m,1)),sig_mono(trunc_tensor_seq(R,k,m[1]))) 
+  for i in (2:length(m))
+    res = res*matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) 
+  end
+  #sigs = [matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) for i in (1:length(m))]
+  #res = prod(sigs)
   if r == 0 
     return res
   else 
     return matrix_tensorSeq_congruence(Array(coreSplineTrafo(m,r)),res)
   end
+end
+
+"""
+    adapted_word(w, m)
+
+Check whether the word `w` (Vector{Int}) is adapted to the composition `m`
+(Vector{Int}).
+
+Returns:
+- `false` if `w` is not adapted
+- otherwise a vector `[v₁, …, v_ℓ]` where each `vᵢ` is a word over `[mᵢ]`
+"""
+function adapted_word(w::Vector{Int}, m::Vector{Int})
+    ℓ = length(m)
+    offsets = cumsum([0; m[1:end-1]])  # ∑_{j<i} m_j
+
+    blocks = [Int[] for _ in 1:ℓ]
+    current = 1
+
+    for x in w
+        while current ≤ ℓ && x > offsets[current] + m[current]
+            current += 1
+        end
+        if current > ℓ || x ≤ offsets[current]
+            return false,[]
+        end
+        push!(blocks[current], x)
+    end
+
+    # subtract offsets to get words over [mᵢ]
+    return true,[blocks[i] .- offsets[i] for i in 1:ℓ]
+end
+
+function _Cpwpoly(_k::Int, m::Vector{Int}, _R::QQMPolyRing)
+   M = sum(m)
+   res = zeros(_R, M*ones(Int,_k)...)
+   for idx in CartesianIndices(res)
+       if _k ==0 
+         res[idx] = one(_R)
+       else
+         b,vs = adapted_word(collect(Tuple(idx)),m)
+         if b
+           res[idx] = prod([QQ(prod(v),prod(cumsum(v))) for v in vs])*one(_R)
+         end
+       end 
+   end
+   return res
+end
+
+function _Cpwpoly_seq(_trunc_level::Int, m::Vector{Int}, _R::QQMPolyRing)
+   Cmono = [_Cpwpoly(i,m, _R) for i in (0:_trunc_level)]
+   return Cmono
+end
+
+function sig_pw_mono_ALS26(TTS::TruncTensorSeq,m::Vector{Int},r=0)
+  k = truncation_level(TTS) 
+  R = base_ring(TTS)
+  return TruncTensorSeqElem(TTS,_Cpwpoly_seq(k,m,R))
 end
 
 function Base.Matrix(a::TruncTensorSeqElem)

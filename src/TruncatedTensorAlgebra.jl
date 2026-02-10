@@ -6,39 +6,35 @@ export TruncatedTensorAlgebra,
        base_ring,
        base_algebra,
        tensor_sequence,
-       TruncatedTensorAlgebra,
        zero,
        one,
-       sig_mono_TA,
-       sigAxis_TA_ClosedForm,
-       sig_axis_TA,
-       sig_poly_TA,
-       sig_pwln_TA_Congruence,
-       sig_pwl_TA_chen,
-       sig_segment_TA,
-       sig_segment_standard_direction_TA,
-       concatenate_tensors_TA,
+       sig_mono_TA,     # soon removed from the export 
+       sigAxis_TA_ClosedForm, # sr
+       sig_axis_TA, # sr
+       sig_poly_TA, # sr
+       sig_pwln_TA_Congruence, # sr
+       sig_pwl_TA_chen, # sr
+       sig_segment_TA, # sr
+       sig_segment_standard_direction_TA, # sr
        matrix_tensorAlg_congruence_TA,
-       matrix_tensor_congruence_TA,
-       matrix_tensor_multiply_TA
 
        # Signature axis functions
-       sigAxis_ClosedForm,
-       sigAxis_p2id_ClosedForm,
-       sigAxis_p2_ClosedForm,
-       sigAxis_Chen,
-       sigAxis_p2id_Chen,
-       sigAxis_p2_Chen,
+       sigAxis_ClosedForm,  # sr
+       sigAxis_p2id_ClosedForm,  # sr
+       sigAxis_p2_ClosedForm,  # sr
+       sigAxis_Chen,  # sr
+       sigAxis_p2id_Chen,  # sr
+       sigAxis_p2_Chen,  # sr
 
        # Moment functions
-       moment_path_level,
-       moment_membrane,
-       moment_membrane_p2id,
-       moment_membrane_p2,
+       moment_path_level,  # sr
+       moment_membrane,  # sr
+       moment_membrane_p2id,  # sr
+       moment_membrane_p2,  # sr
 
       # Tensor algebra operations
-       mode_product,
-       applyMatrixToTTA,
+       mode_product,      # soon be removed to tensor operations?
+       applyMatrixToTTA, 
        sig2parPoly
 
     

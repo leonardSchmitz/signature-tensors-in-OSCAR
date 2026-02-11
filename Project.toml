@@ -1,5 +1,5 @@
 name = "SignatureTensors"
-uuid = "e6efa0c5-1cd0-4528-bbb2-cf1d4bca138c"
+uuid = "5c9b64c6-6bff-409c-98cc-3e0c4aaf8bc2"
 version = "0.1.0"
 authors = ["Gabriel Riffo <riffo@tu-berlin.de>", "Leonard Schmitz <lschmitz@math.tu-berlin>"]
 

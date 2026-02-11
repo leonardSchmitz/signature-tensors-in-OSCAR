@@ -1,14 +1,15 @@
 export TruncatedTensorAlgebra,
        TruncatedTensorAlgebraElem,
        truncation_level,
-       ambient_dimension,
+       #ambient_dimension,
        base_dimension,
-       base_ring,
+       sequence_type,
+       #base_ring,
        base_algebra,
        tensor_sequence,
        zero,
        one,
-       sig, # TODO: implement me 
+       #sig, # TODO: implement me 
        sig_mono_TA,     # soon removed from the export 
        sigAxis_TA_ClosedForm, # sr
        sig_axis_TA, # sr
@@ -55,16 +56,17 @@ struct TruncatedTensorAlgebraElem{R,E}
 end
 
 truncation_level(F::TruncatedTensorAlgebra) = F.truncation_level
-ambient_dimension(F::TruncatedTensorAlgebra) = F.base_dimension
+#ambient_dimension(F::TruncatedTensorAlgebra) = F.base_dimension
 base_dimension(F::TruncatedTensorAlgebra) = F.base_dimension
-base_ring(F::TruncatedTensorAlgebra) = F.base_algebra
+#base_ring(F::TruncatedTensorAlgebra) = F.base_algebra
 base_algebra(F::TruncatedTensorAlgebra) = F.base_algebra
+sequence_type(F::TruncatedTensorAlgebra) = F.sequence_type
 
 Base.parent(a::TruncatedTensorAlgebraElem) = a.parent
 tensor_sequence(a::TruncatedTensorAlgebraElem) = a.elem
 
 
-function TruncatedTensorAlgebra(R, d::Int, k::Int, seq::Symbol=:iis)
+function TruncatedTensorAlgebra(R, d::Int, k::Int; seq::Symbol=:iis)
 
     d ≥ 0 || error("ambient dimension must be ≥ 0")
     k ≥ 0 || error("truncation level must be ≥ 0")
@@ -214,12 +216,12 @@ function Base.one(T::TruncatedTensorAlgebra{R}) where R
     end
 end
 
-function sig(T::TruncatedTensorAlgebra{R},
-             path_type::Symbol; 
-             coef::Array{E}=E[], 
-             algorithm::Symbol=:default) where E
-    return zero(T) # TODO: implement me
-end
+#function sig(T::TruncatedTensorAlgebra{R},
+#             path_type::Symbol; 
+#             coef::Array{E}=E[], 
+#             algorithm::Symbol=:default) where {R,E}
+#    return zero(T) # TODO: implement me
+#end
 
 
 function Base.show(io::IO, x::TruncatedTensorAlgebraElem)

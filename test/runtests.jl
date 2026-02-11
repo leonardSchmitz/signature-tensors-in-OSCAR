@@ -1,6 +1,6 @@
 using Test
 using Oscar
-using signatureTensors   # your main package
+using SignatureTensors   
 
 println("Running all tests in the tests/ folder...")
 

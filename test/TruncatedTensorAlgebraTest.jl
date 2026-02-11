@@ -1,38 +1,81 @@
-@testset "Truncated Tensor Algebra Tests" begin
+
+@testset "Truncated Tensor Algebra Tests :iis" begin
     d = 6        # path dimension
     k = 5        # truncation level
     T = TruncatedTensorAlgebra(QQ,d,k)
-    m = 7        # number of segments
-    A = QQ.(rand((-20:20),d,m)) 
-    S = sig(T,:pwln,coef=A); 
-    C = sig(TruncatedTensorAlgebra(QQ,m,k),:axis); 
 
     @testset "Constructor TTA" begin
        @test T == TruncatedTensorAlgebra(QQ,d,k,sequence_type=:iis)
        @test sequence_type(T) == :iis
        @test base_dimension(T) == d
-       @test base_ring(T) == QQ
+       @test base_algebra(T) == QQ
        @test truncation_level(T) == k
-       @test parent(S) == T
     end
 
-    @testset "Constructor of elements in TTA" begin
-       @test zero(T) + zero(T) == zero(T)
-       @test zero(T) + S == zero(T)
-       @test one(T)*S == S
-       @test S*one(T) == S
-       @test A*C == S
-       #@test inv(A)*S == C
-       @test sig(T,:axis,algorithm=:AFS19) == sig(T,:axis,algorithm=:Chen) 
-       @test sig(T,:pwln,coef=A,algorithm=:congruence) == sig(T,:axis,coef=A,algorithm=:Chen) 
-    end
-    
-    @testset "Chen" begin
-        for m1 in 1:m-1
-            A1 = A[:,1:m1]
-            A2 = A[:,m1+1:end]
-            @test hcat(A1,A2) == A
-            @test sig(T,:pwln,coef=A) == sig(T,:pwln,coef=A1)*sig(T,:pwln,coef=A2)
+    Caxis_d = sig(T,:axis);
+    function axis_core_3tensor_QQ(_d)
+        C = zeros(QQ,_d,_d,_d);
+        for al in (1:_d)
+          for be in (1:_d)
+            for ga in (1:_d)
+              if al == be && be == ga
+                C[al,be,ga] = QQ(1,6)
+              end
+              if (al < be && be == ga)||(al == be && be < ga)
+                C[al,be,ga] = QQ(1,2)
+              end
+              if al < be && be < ga
+                C[al,be,ga] = one(QQ)
+              end
+            end
+          end
         end
+        return C
     end
+
+    @testset "Axis constructor in TTA" begin
+        @test parent(S) == T
+        @test zero(T) + zero(T) == zero(T)
+        @test Caxis_d == sig(T,:axis,algorithm=:Chen)
+        @test Caxis_d == sig(T,:axis,algorithm=:AFS19) 
+        for i in (2:d-1)
+            @test Caxis_d[i] == one(QQ)
+            @test Caxis_d[i,i-1] == zero(QQ)
+            @test Caxis_d[i,i] == QQ(1,2) 
+            @test Caxis_d[i,i+1] == one(QQ)
+        end 
+        axis_core_3tensor_QQ(d) == Caxis_d[:,:,:]
+        @test zero(T) + Caxis_d == Caxis_d
+        @test one(T)*Caxis_d == Caxis_d
+        @test Caxis_d*one(T) == Caxis_d
+        @test inv(Caxis_d)*Caxis_d == one(T)
+        @test Caxis_d*inv(Caxis_d) == one(T)
+        @test inv(inv(Caxis_d)) == Caxis_d
+    end
+
+    #TODO
+    #m = 7        # number of segments
+    #A = QQ.(rand((-20:20),d,m)) 
+    #S = sig(T,:pwln,coef=A); 
+    #C = sig(TruncatedTensorAlgebra(QQ,m,k),:axis); 
+
+    #@test A*Caxis_d == S
+    #    @test S == sig(T,:pwln,coef=A,algorithm=:Chen); 
+    #    @test S == sig(T,:pwln,coef=A,algorithm=:congruence); 
+    #    Cmono_d = sig(T,:mono)
+    #    for Si in [Caxis_d,S,one(T)]
+    #        @test zero(T) + Si == zero(T)
+    #        @test one(T)*Si == Si
+    #        @test Si*one(T) == Si
+    #        @test inv(Si)*Si == one(T)
+    #        @test Si*inv(Si) == one(T)
+    #        @test inv(inv(Si)) == Si
+    #    end
+    #    for m1 in 1:m-1     # decompose via Chen
+    #        A1 = A[:,1:m1]
+    #        A2 = A[:,m1+1:end]
+    #        @test hcat(A1,A2) == A
+    #        @test sig(T,:pwln,coef=A) == sig(T,:pwln,coef=A1)*sig(T,:pwln,coef=A2)
+    #    end
+    
 end

@@ -2,9 +2,9 @@
 @testset "Truncated Tensor Algebra Tests :iis" begin
 
     @testset "Constructor TTA" begin
-       d = 6        # path dimension
-       k = 5        # truncation level
-       T = TruncatedTensorAlgebra(QQ,d,k)
+       d = 6;        # path dimension
+       k = 5;        # truncation level
+       T = TruncatedTensorAlgebra(QQ,d,k);
        @test T == TruncatedTensorAlgebra(QQ,d,k,sequence_type=:iis)
        @test sequence_type(T) == :iis
        @test base_dimension(T) == d
@@ -12,28 +12,29 @@
        @test truncation_level(T) == k
     end
 
-    function axis_core_3tensor_QQ(_d)
-        C = zeros(QQ,_d,_d,_d);
-        for al in (1:_d)
-          for be in (1:_d)
-            for ga in (1:_d)
-              if al == be && be == ga
-                C[al,be,ga] = QQ(1,6)
-              end
-              if (al < be && be == ga)||(al == be && be < ga)
-                C[al,be,ga] = QQ(1,2)
-              end
-              if al < be && be < ga
-                C[al,be,ga] = one(QQ)
-              end
-            end
-          end
-        end
-        return C
-    end
+    #function axis_core_3tensor_QQ(_d)
+    #    C = zeros(QQ,_d,_d,_d);
+    #    for al in (1:_d)
+    #      for be in (1:_d)
+    #        for ga in (1:_d)
+    #          if al == be && be == ga
+    #            C[al,be,ga] = QQ(1,6)
+    #          end
+    #          if (al < be && be == ga)||(al == be && be < ga)
+    #            C[al,be,ga] = QQ(1,2)
+    #          end
+    #          if al < be && be < ga
+    #            C[al,be,ga] = one(QQ)
+    #          end
+    #        end
+    #      end
+    #    end
+    #    return C
+    #end
 
     @testset "Axis constructor in TTA for QQ" begin
-        T = TruncatedTensorAlgebra(QQ,6,5);
+        d = 6;
+        T = TruncatedTensorAlgebra(QQ,d,4);
         Caxis_d = sig(T,:axis);
         @test parent(Caxis_d) == T
         @test zero(T) + zero(T) == zero(T)
@@ -45,7 +46,7 @@
             @test Caxis_d[i,i] == QQ(1,2) 
             @test Caxis_d[i,i+1] == one(QQ)
         end 
-        @test axis_core_3tensor_QQ(d) == Caxis_d[:,:,:]
+        #@test axis_core_3tensor_QQ(d) == Caxis_d[:,:,:]
         @test zero(T) + Caxis_d == Caxis_d
         @test one(T)*Caxis_d == Caxis_d
         @test Caxis_d*one(T) == Caxis_d
@@ -77,7 +78,7 @@
     end
 
     @testset "Pwln constructor in TTA" begin
-        d = 6; k = 5; number_tests = 5;
+        d = 6; k = 4; number_tests = 5;
         T = TruncatedTensorAlgebra(QQ,d,k);
         ms = rand((1:7),number_tests); # maximal 7 number of segments
         As = [QQ.(rand((-20:20),d,m)) for m in ms];

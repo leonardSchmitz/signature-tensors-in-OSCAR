@@ -258,7 +258,7 @@ function Oscar.evaluate(
 end
 
 
-
+#TODO: why?
 # 1) return 1 of the correct type
 function one_elem(R)
     if R === QQField
@@ -270,6 +270,7 @@ function one_elem(R)
     end
 end
 
+#TODO: why?
 # 2) return 0
 function zero_elem(R)
     if R === QQField
@@ -311,8 +312,8 @@ function _Cmono_seqTA(_trunc_level::Int, _order::Int, R0)
 end
 
 function _one_hot_TA(_i::Int, _n::Int, _R)
-    res = fill(zero_elem(_R), _n)
-    res[_i] = one_elem(_R)
+    res = fill(zero(_R), _n)
+    res[_i] = one(_R)
     return res
 end
 
@@ -327,6 +328,7 @@ function sig_mono_TA(T::TruncatedTensorAlgebra{R}) where R
 
     # base algebra
     R0 = base_algebra(T)
+    #TODO: why not simply R?
 
     # seq must be an Vector{Array{E}} for some E
     seq = _Cmono_seqTA(k, d, R0)
@@ -433,52 +435,8 @@ permutations_1_to_j(j::Int) =
 
 
 
-function matrix_tensorAlg_congruence_TA(
-    matrix::AbstractMatrix,
-    b::TruncatedTensorAlgebraElem{R,E}
-) where {R,E}
-
-    T = parent(b)
-    k = truncation_level(T)
-    m = base_dimension(T)
-    @assert m == ncols(matrix)
-    d = nrows(matrix)
-
-    # Ring
-    R_tensor = base_algebra(T)
-
-    R_matrix = parent(matrix[1,1])
-
-    # Simple Rule 
-    Rnew = common_ring(R_tensor, R_matrix)
-
-    # New Algebra 
-    Tnew = TruncatedTensorAlgebra(Rnew, d, k, :iis)
-
-    # Convert tensor in the new Ring
-    tensorSeq = tensor_sequence(b)
-    tensorSeq = [map(x -> Rnew(x), t) for t in tensorSeq]
-
-    # Apply congruence
-    resSeq = [
-        matrix_tensor_congruence_TA(map(x -> Rnew(x), matrix), t)
-        for t in tensorSeq
-    ]
-
-    return TruncatedTensorAlgebraElem(Tnew, resSeq)
-end
 
 
-# ----------------------------
-# congruence for vectors (treat as 1×d matrices)
-# ----------------------------
-function matrix_tensorAlg_congruence_TA(
-    v::AbstractVector,
-    b::TruncatedTensorAlgebraElem{R,E}
-) where {R,E}
-    M = reshape(v, 1, length(v))
-    return matrix_tensorAlg_congruence_TA(M, b)
-end
 
 function sig_segment_TA(T::TruncatedTensorAlgebra{R}, v::Vector{E}) where {R,E}
     # --- validation---
@@ -489,7 +447,8 @@ function sig_segment_TA(T::TruncatedTensorAlgebra{R}, v::Vector{E}) where {R,E}
 
     # --- veryfy the types---
     @assert typeof(v[1]) <: E "element types do not match"
-
+    
+    #TODO: why not R?
     # --- create a new algebra ---
     T1 = TruncatedTensorAlgebra(base_algebra(T), 1, k, :iis)
 
@@ -504,10 +463,11 @@ function sig_segment_TA(T::TruncatedTensorAlgebra{R}, v::Vector{E}) where {R,E}
 end
 
 
-function sig_segment_standard_direction_TA(T::TruncatedTensorAlgebra{R}, _i::Int) where {R}
+function sig_segment_standard_direction_TA(T::TruncatedTensorAlgebra{R}, _i::Int) where R
     d = base_dimension(T)
+    A = base_algebra(T)
     # vector one-hot in the direction _i
-    v = _one_hot_TA(_i, d, R)
+    v = _one_hot_TA(_i, d, A)
     return sig_segment_TA(T, v)
 end
 
@@ -698,34 +658,34 @@ end
 
 
 
-function sigAxis_TA_ClosedForm(T::TruncatedTensorAlgebra)
+function sigAxis_TA_ClosedForm(T::TruncatedTensorAlgebra{R}) where R
     if T.sequence_type != :iis
         error("sigAxis_TA only defined for sequence_type = :iis")
     end
 
-    R = base_algebra(T)
     d = base_dimension(T)
     k = truncation_level(T)
+    A = base_algebra(T)
 
-    E = typeof(one(R))                 # tipe of the element
+    E = typeof(one(A))                 # tipe of the element
     elem_out = Vector{Array{E}}(undef, k+1)
 
     # ======================
     # Level 0 (tensor 0-dimensional)
     # ======================
-    elem_out[1] = fill(one(R), ())    # array 0-dimensional
+    elem_out[1] = fill(one(A), ())    # array 0-dimensional
 
     # ======================
     # Level 1
     # ======================
-    elem_out[2] = fill(one(R), d)
+    elem_out[2] = fill(one(A), d)
 
     # ======================
     # Levels >= 2
     # ======================
     for j in 2:k
         dims = ntuple(_ -> d, j)
-        tensor_j = zeros(E, dims...)
+        tensor_j = zeros(A, dims...)
 
         for idx in combinations_with_replacement(1:d, j)
             counts = Dict{Int,Int}()
@@ -738,7 +698,7 @@ function sigAxis_TA_ClosedForm(T::TruncatedTensorAlgebra)
             value = 1 // denom
 
             tensor_j[idx...] = try
-                R(value)
+                A(value)
             catch
                 convert(E, value)
             end
@@ -751,23 +711,16 @@ function sigAxis_TA_ClosedForm(T::TruncatedTensorAlgebra)
 end
 
 
-
-
-#With chen
 #TODO: iterate chen not simpultaneous
 function sig_axis_TA(T::TruncatedTensorAlgebra{R}) where R
     k = truncation_level(T)
     d = base_dimension(T) 
-
     # 1) Create the d standard segments  ( base direction)
     sample = [sig_segment_standard_direction_TA(T, i) for i in 1:d]
-
     # 2) create the free truncated multivariate algebra
     F, s = free_trunc_sig_alg_multiv(k, d)
-
     # 3) chen product: Multiplication the generators 1..d
     chen = prod([free_sig_from_sample(i, F) for i in 1:d])
-
     # 4) evaluation
     return evaluate_TA(chen, sample)
 end
@@ -784,40 +737,69 @@ function sig_poly_TA(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where
 end
 
 
-function sig_pwln_TA_Congruence(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where R
+function sig_pwln_TA_Congruence(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix{E}) where {R,E}
+    d = base_dimension(T)
     @assert size(coeffs,1) == d "Dimensions mismatch"
-    k1=truncation_level(T)
-    R1 = base_algebra(T)
-    d1=size(coeffs, 2)
-    T1 = TruncatedTensorAlgebra(R1,d1,k1)
-    return matrix_tensorAlg_congruence_TA(coeffs, sig(T1,:axis))
+    k=truncation_level(T)
+    A = base_algebra(T)
+    m=size(coeffs, 2)
+    Tm = TruncatedTensorAlgebra(A,m,k)
+    return matrix_tensorAlg_congruence_TA(coeffs, sig(Tm,:axis))
 end
 
 #TODO: iterate this, not all secments simpultaneous
 function sig_pwln_TA_chen(T::TruncatedTensorAlgebra{R}, P::AbstractMatrix{E}) where {R,E}
     d = base_dimension(T)
     @assert size(P,1) == d "Dimensions mismatch"
-    k1=truncation_level(T)
-    R1 = base_algebra(T)
-    d1=size(P,2)
-    T1 = TruncatedTensorAlgebra(R1,d1,k1)
-    seg_vecs = [P[i+1, :] .- P[i, :] for i in 1:size(P,1)-1]
-    seg_sigs = [sig_segment_TA(T1, seg_vecs[i]) for i in 1:length(seg_vecs)]
+    m=size(P,2)
+    #k1=truncation_level(T)
+    #R1 = base_algebra(T)
+    #d1=size(P,2)
+    #T1 = TruncatedTensorAlgebra(R1,d1,k1)
+    #seg_vecs = [P[i+1, :] .- P[i, :] for i in 1:size(P,1)-1]
+    #seg_sigs = [sig_segment_TA(T1, seg_vecs[i]) for i in 1:length(seg_vecs)]
+    seg_sigs = [sig_segment_TA(T, P[:,i]) for i in 1:m]
     return prod(seg_sigs)
 end
 
-
-
-function matrix_tensorAlg_congruence_TA(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
-    y = deepcopy(x)
-
-    for lvl in 2:length(y.elem)
-        y.elem[lvl] = matrix_tensor_congruence_TA(matrix, y.elem[lvl])
-    end
-
-    return y
+function matrix_tensorAlg_congruence_TA(
+    v::AbstractVector,
+    b::TruncatedTensorAlgebraElem{R,E}
+) where {R,E}
+    M = reshape(v, 1, length(v))
+    return matrix_tensorAlg_congruence_TA(M, b)
 end
 
+#function matrix_tensorAlg_congruence_TA(
+#    matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
+#    y = deepcopy(x)
+#    for lvl in 2:length(y.elem)
+#        y.elem[lvl] = matrix_tensor_congruence_TA(matrix, y.elem[lvl])
+#    end
+#    return y
+#end
+
+function matrix_tensorAlg_congruence_TA(
+    matrix::AbstractMatrix,
+    b::TruncatedTensorAlgebraElem{R,E}
+) where {R,E}
+    T = parent(b)
+    k = truncation_level(T)
+    m = base_dimension(T)
+    @assert m == ncols(matrix)
+    d = nrows(matrix)
+    R_tensor = base_algebra(T)
+    R_matrix = parent(matrix[1,1])
+    Rnew = common_ring(R_tensor, R_matrix)
+    Tnew = TruncatedTensorAlgebra(Rnew, d, k, :iis)
+    tensorSeq = tensor_sequence(b)
+    tensorSeq = [map(x -> Rnew(x), t) for t in tensorSeq]
+    resSeq = [
+        matrix_tensor_congruence_TA(map(x -> Rnew(x), matrix), t)
+        for t in tensorSeq
+    ]
+    return TruncatedTensorAlgebraElem(Tnew, resSeq)
+end
 
 ##################
 # arithmetic tensor sequences (only for :iis)

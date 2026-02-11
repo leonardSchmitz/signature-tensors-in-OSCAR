@@ -3,7 +3,7 @@ export
   matrix_tensor_multiply, 
   matrix_tensor_congruence, 
   matrix_tensor_congruence_TA,
-  concatenate_tensors_TA,
+#  concatenate_tensors_TA,
   matrix_tensor_congruence_TA
 
 

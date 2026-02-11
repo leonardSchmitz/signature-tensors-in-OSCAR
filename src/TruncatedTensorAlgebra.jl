@@ -441,8 +441,8 @@ function matrix_tensorAlg_congruence_TA(
     T = parent(b)
     k = truncation_level(T)
     m = base_dimension(T)
-    @assert m == size(matrix, 2)
-    d = size(matrix, 1)
+    @assert m == ncols(matrix)
+    d = nrows(matrix)
 
     # Ring
     R_tensor = base_algebra(T)
@@ -808,15 +808,15 @@ end
 
 
 
-#function matrix_tensorAlg_congruence_TA(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
-#    y = deepcopy(x)
-#
-#    for lvl in 2:length(y.elem)
-#        y.elem[lvl] = matrix_tensor_congruence_TA(matrix, y.elem[lvl])
-#    end
-#
-#    return y
-#end
+function matrix_tensorAlg_congruence_TA(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
+    y = deepcopy(x)
+
+    for lvl in 2:length(y.elem)
+        y.elem[lvl] = matrix_tensor_congruence_TA(matrix, y.elem[lvl])
+    end
+
+    return y
+end
 
 
 ##################
@@ -1328,9 +1328,9 @@ end
 # Optional dispatch by seq_type
 # ==============================================================
 function moment_membrane(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
-    if TTA.seq_type == :p2id
+    if TTA.sequence_type == :p2id
         return moment_membrane_p2id(TTA, m, n)
-    elseif TTA.seq_type == :p2
+    elseif TTA.sequence_type == :p2
         return moment_membrane_p2(TTA, m, n)
     else
         error("sequence_type must be :p2id or :p2")
@@ -1396,10 +1396,10 @@ function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
 
     R = X.base_algebra
     k = X.truncation_level
-    seq_type = X.seq_type
+    seq_type = X.sequence_type
 
     # Create new TTA with updated ambient dimension
-    X_new = TruncatedTensorAlgebra(R, d_new, k, seq_type=seq_type)
+    X_new = TruncatedTensorAlgebra(R, d_new, k, sequence_type=seq_type)
 
     for j in 1:k
         T = X.tensor_sequence[j]
@@ -1435,7 +1435,7 @@ function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
             end
             T = T_perm
         else
-            error("seq_type must be :p2 or :p2id")
+            error("sequence_type must be :p2 or :p2id")
         end
 
         X_new.tensor_sequence[j] = T
@@ -1461,7 +1461,7 @@ function sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
 
     R = T.base_algebra
     k = T.truncation_level
-    seq_type = T.seq_type
+    seq_type = T.sequence_type
 
     # Step 1: Build moment membrane tensor in same algebra as T
     T_moment = momentMembraneTensor(T)   # <-- returns TruncatedTensorAlgebra with same algebra

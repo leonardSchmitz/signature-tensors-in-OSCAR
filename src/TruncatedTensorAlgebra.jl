@@ -785,16 +785,24 @@ end
 
 
 function sig_pwln_TA_Congruence(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where R
-    return matrix_tensorAlg_congruence_TA(coeffs, sig(T,:axis))
+    @assert size(coeffs,1) == d "Dimensions mismatch"
+    k1=truncation_level(T)
+    R1 = base_algebra(T)
+    d1=size(coeffs, 2)
+    T1 = TruncatedTensorAlgebra(R1,d1,k1)
+    return matrix_tensorAlg_congruence_TA(coeffs, sig(T1,:axis))
 end
 
 #TODO: iterate this, not all secments simpultaneous
 function sig_pwln_TA_chen(T::TruncatedTensorAlgebra{R}, P::AbstractMatrix{E}) where {R,E}
     d = base_dimension(T)
-    @assert size(P,2) == d "Dimensions mismatch"
-
+    @assert size(P,1) == d "Dimensions mismatch"
+    k1=truncation_level(T)
+    R1 = base_algebra(T)
+    d1=size(P,2)
+    T1 = TruncatedTensorAlgebra(R1,d1,k1)
     seg_vecs = [P[i+1, :] .- P[i, :] for i in 1:size(P,1)-1]
-    seg_sigs = [sig_segment_TA(T, seg_vecs[i]) for i in 1:length(seg_vecs)]
+    seg_sigs = [sig_segment_TA(T1, seg_vecs[i]) for i in 1:length(seg_vecs)]
     return prod(seg_sigs)
 end
 

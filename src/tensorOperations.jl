@@ -26,7 +26,7 @@ function matrix_tensor_multiply(matrix::Array, tensor::Array, index::Int)
         A new tensor resulting from the multiplication.
     """
     # Ensure the dimensions match for contraction
-    @assert 1 ≤ index ≤ ndims(tensor) "Index must be a valid axis of the tensor."
+    @assert 1 <= index <= ndims(tensor) "Index must be a valid axis of the tensor."
     @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
     # Move the target axis to the first dimension
     perm = [index; 1:index-1; index+1:ndims(tensor)]
@@ -80,7 +80,7 @@ function matrix_tensor_congruence_TA(matrix::AbstractMatrix, tensor::AbstractArr
 end
 
 function matrix_tensor_multiply_TA(matrix::AbstractMatrix, tensor::AbstractArray, index::Int)
-    @assert 1 ≤ index ≤ ndims(tensor) "Index must be a valid axis of the tensor."
+    @assert 1 <= index <= ndims(tensor) "Index must be a valid axis of the tensor."
     @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
 
     # 1) Matric and tensor type 

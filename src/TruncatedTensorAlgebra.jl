@@ -66,8 +66,8 @@ tensor_sequence(a::TruncatedTensorAlgebraElem) = a.elem
 #TODO: no ≥ 
 function TruncatedTensorAlgebra(R, d::Int, k::Int; seq::Symbol=:iis)
 
-    d ≥ 0 || error("ambient dimension must be ≥ 0")
-    k ≥ 0 || error("truncation level must be ≥ 0")
+    d >= 0 || error("ambient dimension must be ≥ 0")
+    k >= 0 || error("truncation level must be ≥ 0")
 
     if seq ∉ (:iis, :p2id, :p2)
         error("seq must be one of :iis, :p2id, :p2")
@@ -407,6 +407,31 @@ function common_ring(R_tensor, R_matrix)
 end
 
 
+# ------------------------------------------------------------
+# Help function for permutations
+# ------------------------------------------------------------
+
+
+function permutations_ntuple(v::NTuple{N,Int}) where N
+    if N == 1
+        return [v]
+    end
+    out = NTuple{N,Int}[]
+    for i in 1:N
+        x = v[i]
+        rest = ntuple(k -> v[k < i ? k : k+1], N-1)
+        for p in permutations_ntuple(rest)
+            push!(out, (x, p...))
+        end
+    end
+    return out
+end
+
+permutations_1_to_j(j::Int) =
+    permutations_ntuple(ntuple(identity, j))
+
+
+
 
 function matrix_tensorAlg_congruence_TA(
     matrix::AbstractMatrix,
@@ -648,10 +673,12 @@ end
 function combinations_with_replacement(iter, k)
     arr = collect(iter)
     n = length(arr)
+
     if k == 0
         return [[]]
     end
-    res = []
+
+    res = Vector{Vector{Int}}()
     comb = zeros(Int, k)
 
     function backtrack(pos, start)
@@ -661,10 +688,11 @@ function combinations_with_replacement(iter, k)
         end
         for i in start:n
             comb[pos] = arr[i]
-            backtrack(pos+1, i)
+            backtrack(pos + 1, i)
         end
     end
 
+    backtrack(1, 1)
     return res
 end
 
@@ -990,7 +1018,7 @@ function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) w
         σ_m = sig_m.elem[j+1]
         σ_n = sig_n.elem[j+1]
 
-        perms = Combinatorics.permutations(1:j)
+        perms = permutations_1_to_j(1:j)
 
         tensor_j = Array{eltype(σ_m)}(
             undef,
@@ -1126,7 +1154,7 @@ function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
         σ_m = sig_m.elem[j+1]
         σ_n = sig_n.elem[j+1]
 
-        perms = Combinatorics.permutations(1:j)
+        perms = permutations_1_to_j(1:j)
 
         tensor_j = Array{eltype(σ_m)}(
             undef,
@@ -1264,7 +1292,7 @@ function moment_membrane_p2(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
         σ_m = moment_path_level(R, m, j)
         σ_n = moment_path_level(R, n, j)
 
-        perms = collect(Combinatorics.permutations(1:j))
+        perms = collect(permutations_1_to_j(j))
         tensor_j = Array{QQMPolyRingElem}(undef, (ntuple(_ -> m*n, j)..., factorial(j)))
 
         # Loop over permutations
@@ -1381,7 +1409,7 @@ function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
             end
         elseif seq_type == :p2
             # For p2, we must account for permutations
-            perms = collect(Combinatorics.permutations(1:j))
+            perms = permutations_1_to_j(j)
             T_perm = Array{typeof(one_elem(R))}(undef, (ntuple(_ -> d_new, j)..., factorial(j)))
 
             for (perm_idx, perm) in enumerate(perms)
@@ -1435,6 +1463,3 @@ function sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
 
     return T_new
 end
-
-
-

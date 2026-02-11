@@ -1,18 +1,16 @@
 export TruncatedTensorAlgebra,
        TruncatedTensorAlgebraElem,
        truncation_level,
-       #ambient_dimension,
        base_dimension,
        sequence_type,
-       #base_ring,
        base_algebra,
        tensor_sequence,
        zero,
        one,
-       #sig, # TODO: implement me 
+       sig, # TODO: implement me 
        sig_mono_TA,     # soon removed from the export 
-       sigAxis_TA_ClosedForm, # sr
-       sig_axis_TA, # sr
+       #sigAxis_TA_ClosedForm, # sr
+       #sig_axis_TA, # sr
        sig_poly_TA, # sr
        sig_pwln_TA_Congruence, # sr
        sig_pwl_TA_chen, # sr
@@ -65,7 +63,7 @@ sequence_type(F::TruncatedTensorAlgebra) = F.sequence_type
 Base.parent(a::TruncatedTensorAlgebraElem) = a.parent
 tensor_sequence(a::TruncatedTensorAlgebraElem) = a.elem
 
-
+#TODO: no ≥ 
 function TruncatedTensorAlgebra(R, d::Int, k::Int; seq::Symbol=:iis)
 
     d ≥ 0 || error("ambient dimension must be ≥ 0")
@@ -93,7 +91,7 @@ function _C0_TA(_k::Int, _order::Int, _alg, is_one::Bool)
 end
 
 function tensor_sequence_constructor(A::TruncatedTensorAlgebra; is_one=true)
-    R   = A.base_ring
+    R   = A.base_algebra
     d   = A.amb_dim
     k   = A.trunc_level
     seq = A.sequence_type
@@ -206,7 +204,7 @@ function Base.one(T::TruncatedTensorAlgebra{R}) where R
     if T.sequence_type == :iis
 
         k = truncation_level(T)
-        d = ambient_dimension(T)
+        d = base_dimension(T)
         alg = T.base_algebra
         E = typeof(one(alg))
 
@@ -216,12 +214,24 @@ function Base.one(T::TruncatedTensorAlgebra{R}) where R
     end
 end
 
-#function sig(T::TruncatedTensorAlgebra{R},
-#             path_type::Symbol; 
-#             coef::Array{E}=E[], 
-#             algorithm::Symbol=:default) where {R,E}
-#    return zero(T) # TODO: implement me
-#end
+function sig(T::TruncatedTensorAlgebra{R},
+             path_type::Symbol; 
+             coef=[], 
+             algorithm::Symbol=:default) where R
+    if path_type==:point && coef==[] && algorithm == :default
+        return one(T)
+    elseif path_type==:axis && coef==[] && (algorithm == :default || algorithm ==:AFS19)
+        return sigAxis_TA_ClosedForm(T) 
+    elseif path_type==:axis && coef==[] && algorithm == :Chen 
+        return sig_axis_TA(T) 
+    elseif path_type==:pwln && algorithm == :congruence
+        return sig_pwln_TA_Congruence(T,coef)
+    elseif path_type==:pwln && (algorithm == :Chen || algorithm == :default)
+        return sig_pwln_TA_chen(T,coef)
+    else 
+        throw(ArgumentError("sig not supported for given arguments")) 
+    end 
+end
 
 
 function Base.show(io::IO, x::TruncatedTensorAlgebraElem)
@@ -313,7 +323,7 @@ function sig_mono_TA(T::TruncatedTensorAlgebra{R}) where R
     end
 
     k = truncation_level(T)
-    d = ambient_dimension(T)
+    d = base_dimension(T)
 
     # base algebra
     R0 = base_algebra(T)
@@ -405,12 +415,12 @@ function matrix_tensorAlg_congruence_TA(
 
     T = parent(b)
     k = truncation_level(T)
-    m = ambient_dimension(T)
+    m = base_dimension(T)
     @assert m == size(matrix, 2)
     d = size(matrix, 1)
 
     # Ring
-    R_tensor = base_ring(T)
+    R_tensor = base_algebra(T)
 
     R_matrix = parent(matrix[1,1])
 
@@ -448,7 +458,7 @@ end
 function sig_segment_TA(T::TruncatedTensorAlgebra{R}, v::Vector{E}) where {R,E}
     # --- validation---
     k = truncation_level(T)
-    d = ambient_dimension(T)
+    d = base_dimension(T)
 
     @assert length(v) == d "dimensions do not match"
 
@@ -456,7 +466,7 @@ function sig_segment_TA(T::TruncatedTensorAlgebra{R}, v::Vector{E}) where {R,E}
     @assert typeof(v[1]) <: E "element types do not match"
 
     # --- create a new algebra ---
-    T1 = TruncatedTensorAlgebra(base_ring(T), 1, k, :iis)
+    T1 = TruncatedTensorAlgebra(base_algebra(T), 1, k, :iis)
 
     # --- signature mono in dimension 1 ---
     C = sig_mono_TA(T1)
@@ -470,7 +480,7 @@ end
 
 
 function sig_segment_standard_direction_TA(T::TruncatedTensorAlgebra{R}, _i::Int) where {R}
-    d = ambient_dimension(T)
+    d = base_dimension(T)
     # vector one-hot in the direction _i
     v = _one_hot_TA(_i, d, R)
     return sig_segment_TA(T, v)
@@ -531,12 +541,12 @@ end
 
 
 
-function concatenate_tensors_TA(t1::AbstractArray, t2::AbstractArray)
-    # Concatenate tensors by outer product
-    reshaped_tensor1 = reshape(t1, size(t1)..., ones(Int, ndims(t2))...)
-    reshaped_tensor2 = reshape(t2, ones(Int, ndims(t1))..., size(t2)...)
-    return reshaped_tensor1 .* reshaped_tensor2
-end
+#function concatenate_tensors_TA(t1::AbstractArray, t2::AbstractArray)
+#    # Concatenate tensors by outer product
+#    reshaped_tensor1 = reshape(t1, size(t1)..., ones(Int, ndims(t2))...)
+#    reshaped_tensor2 = reshape(t2, ones(Int, ndims(t1))..., size(t2)...)
+#    return reshaped_tensor1 .* reshaped_tensor2
+#end
 
 
 function concatenate_tensors_TA(t1::TruncatedTensorAlgebraElem, t2::TruncatedTensorAlgebraElem)
@@ -716,9 +726,10 @@ end
 
 
 #With chen
+#TODO: iterate chen not simpultaneous
 function sig_axis_TA(T::TruncatedTensorAlgebra{R}) where R
     k = truncation_level(T)
-    d = ambient_dimension(T) 
+    d = base_dimension(T) 
 
     # 1) Create the d standard segments  ( base direction)
     sample = [sig_segment_standard_direction_TA(T, i) for i in 1:d]
@@ -746,17 +757,12 @@ end
 
 
 function sig_pwln_TA_Congruence(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where R
-    # 1) Obtain moment path (sig_mono_TA)
-    mono_path = sig_axis_TA(T)
-
-    # 2) Apply coeficients with matricial congruence
-    poly_path = matrix_tensorAlg_congruence_TA(coeffs, mono_path)
-
-    return poly_path
+    return matrix_tensorAlg_congruence_TA(coeffs, sig(T,:axis))
 end
 
-function sig_pwl_TA_chen(T::TruncatedTensorAlgebra{R}, P::AbstractMatrix{E}) where {R,E}
-    d = ambient_dimension(T)
+#TODO: iterate this, not all secments simpultaneous
+function sig_pwln_TA_chen(T::TruncatedTensorAlgebra{R}, P::AbstractMatrix{E}) where {R,E}
+    d = base_dimension(T)
     @assert size(P,2) == d "Dimensions mismatch"
 
     seg_vecs = [P[i+1, :] .- P[i, :] for i in 1:size(P,1)-1]
@@ -898,7 +904,7 @@ end
 # Principal function (dispatch)
 # -------------------------------
 function sigAxis_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
-    if m * n != ambient_dimension(T)
+    if m * n != base_dimension(T)
         error("m * n != d")
     end
 
@@ -957,7 +963,7 @@ end
 # -------------------------------
 function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     k = truncation_level(T)
-    d=ambient_dimension(T)
+    d=base_dimension(T)
 
     if m * n != d
         error("m * n != d")
@@ -1033,7 +1039,7 @@ end
 # Principal function (dispatch)
 # -------------------------------
 function sigAxis_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
-    if m * n != ambient_dimension(T)
+    if m * n != base_dimension(T)
         error("m * n != d")
     end
 
@@ -1093,7 +1099,7 @@ end
 # -------------------------------
 function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     k = truncation_level(T)
-    d=ambient_dimension(T)
+    d=base_dimension(T)
 
     if m * n != d
         error("m * n != d")
@@ -1198,9 +1204,9 @@ Compute the moment tensors for a TruncatedTensorAlgebra of sequence type `:p2id`
 Returns a new TTA object with `elem[j]` filled for all levels up to `truncation_level`.
 """
 function moment_membrane_p2id(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
-    R = TTA.base_ring
+    R = TTA.base_algebra
     k = TTA.truncation_level
-    d = TTA.ambient_dimension
+    d = TTA.base_dimension
 
     if m * n != d
         error("m * n must equal the ambient dimension of TTA")
@@ -1241,7 +1247,7 @@ Compute the moment tensors for a TruncatedTensorAlgebra of sequence type `:p2`.
 Returns a new TTA object with `elem[j]` filled for all levels up to `truncation_level`.
 """
 function moment_membrane_p2(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
-    R = TTA.base_ring
+    R = TTA.base_algebra
     k = TTA.truncation_level
     d = TTA.ambient_dimension
 
@@ -1350,9 +1356,9 @@ Returns a **new** TruncatedTensorAlgebra with updated ambient dimension `d_new`.
 """
 function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
     d_new, d = size(A)
-    d == X.ambient_dimension || error("size(A,2) must match ambient dimension")
+    d == X.base_dimension || error("size(A,2) must match ambient dimension")
 
-    R = X.base_ring
+    R = X.base_algebra
     k = X.truncation_level
     seq_type = X.seq_type
 
@@ -1415,9 +1421,9 @@ via matrix-tensor congruence. Returns a **new** truncated tensor algebra with up
 """
 function sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
     d_new, d = size(a)
-    d == T.ambient_dimension || error("size(a,2) must match T.ambient_dimension")
+    d == T.base_dimension || error("size(a,2) must match T.ambient_dimension")
 
-    R = T.base_ring
+    R = T.base_algebra
     k = T.truncation_level
     seq_type = T.seq_type
 

@@ -64,16 +64,16 @@ Base.parent(a::TruncatedTensorAlgebraElem) = a.parent
 tensor_sequence(a::TruncatedTensorAlgebraElem) = a.elem
 
 #TODO: no ≥ 
-function TruncatedTensorAlgebra(R, d::Int, k::Int; seq::Symbol=:iis)
+function TruncatedTensorAlgebra(R, d::Int, k::Int; sequence_type::Symbol=:iis)
 
     d >= 0 || error("ambient dimension must be ≥ 0")
     k >= 0 || error("truncation level must be ≥ 0")
 
-    if seq ∉ (:iis, :p2id, :p2)
-        error("seq must be one of :iis, :p2id, :p2")
+    if !(sequence_type in (:iis, :p2id, :p2))
+        error("sequence_type must be one of :iis, :p2id, :p2")
     end
 
-    A = TruncatedTensorAlgebra{typeof(R)}(R, d, k, seq)
+    A = TruncatedTensorAlgebra{typeof(R)}(R, d, k, sequence_type)
 
     return A
 end

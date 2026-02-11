@@ -808,15 +808,15 @@ end
 
 
 
-function matrix_tensorAlg_congruence_TA(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
-    y = deepcopy(x)
-
-    for lvl in 2:length(y.elem)
-        y.elem[lvl] = matrix_tensor_congruence_TA(matrix, y.elem[lvl])
-    end
-
-    return y
-end
+#function matrix_tensorAlg_congruence_TA(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
+#    y = deepcopy(x)
+#
+#    for lvl in 2:length(y.elem)
+#        y.elem[lvl] = matrix_tensor_congruence_TA(matrix, y.elem[lvl])
+#    end
+#
+#    return y
+#end
 
 
 ##################

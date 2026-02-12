@@ -1,6 +1,18 @@
-module SignatureTensors
 
+module SignatureTensors
 using Oscar;
+
+"""
+Welcome to SignatureTensors v0.1
+
+This package allows computing and working with signatures of rough paths
+using algebraic methods within OSCAR.
+
+For more information, visit:
+https://github.com/leonardSchmitz/signature-tensors-in-OSCAR
+"""
+
+
 
 greet() = print("Hello World!")
 

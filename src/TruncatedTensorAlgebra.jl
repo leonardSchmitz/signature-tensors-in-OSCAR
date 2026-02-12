@@ -225,9 +225,9 @@ function sig(T::TruncatedTensorAlgebra{R},
     elseif path_type==:axis && coef==[] && algorithm == :Chen 
         return sig_axis_TA(T) 
     elseif path_type==:pwln && algorithm == :congruence
-        return sig_pwln_TA_Congruence(T,coef)
+        return sig_pwln_TA_Congruence(T,Array(coef))
     elseif path_type==:pwln && (algorithm == :Chen || algorithm == :default)
-        return sig_pwln_TA_chen(T,coef)
+        return sig_pwln_TA_chen(T,Array(coef))
     else 
         throw(ArgumentError("sig not supported for given arguments")) 
     end 

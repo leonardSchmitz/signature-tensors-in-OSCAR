@@ -1,7 +1,3 @@
-
-module SignatureTensors
-using Oscar;
-
 """
 Welcome to SignatureTensors v0.1
 
@@ -11,6 +7,10 @@ using algebraic methods within OSCAR.
 For more information, visit:
 https://github.com/leonardSchmitz/signature-tensors-in-OSCAR
 """
+module SignatureTensors
+using Oscar;
+
+
 
 
 

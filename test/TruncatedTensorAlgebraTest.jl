@@ -85,9 +85,9 @@
               M = sum(m);
               n = sum(m) - r*(l-1); 
               T = TruncatedTensorAlgebra(QQ,n,4); 
-              S = sig(T,:pwmon,composition=m);
-              @test S == sig(T,:pwmon,composition=m,algorithm=:Chen); 
-              @test S == sig(T,:pwmon,composition=m,algorithm=:ALS26); 
+              S = sig(T,:pwmon,composition=m,regularity=r);
+              @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:Chen); 
+              @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:ALS26); 
           end
         end
         r = 2;
@@ -96,9 +96,9 @@
               M = sum(m);
               n = sum(m) - r*(l-1); 
               T = TruncatedTensorAlgebra(QQ,n,4); 
-              S = sig(T,:pwmon,composition=m);
-              @test S == sig(T,:pwmon,composition=m,algorithm=:Chen); 
-              @test S == sig(T,:pwmon,composition=m,algorithm=:ALS26); 
+              S = sig(T,:pwmon,composition=m,regularity=r);
+              @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:Chen); 
+              @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:ALS26); 
         end
     end
 

@@ -215,7 +215,7 @@ end
 function sig(T::TruncatedTensorAlgebra{R},
              path_type::Symbol; 
              coef=[], 
-             composition=Int[],
+             composition::Vector{Int}=Int[],
              regularity::Int=0,
              algorithm::Symbol=:default) where R
     if path_type==:point && coef==[] && algorithm == :default
@@ -224,14 +224,16 @@ function sig(T::TruncatedTensorAlgebra{R},
         return sigAxis_TA_ClosedForm(T) 
     elseif path_type==:axis && coef==[] && algorithm == :Chen 
         return sig_axis_TA(T) 
+    elseif path_type==:mono && coef==[] && algorithm == :default
+        return sig_mono_TA(T) 
     elseif path_type==:pwln && algorithm == :congruence
         return sig_pwln_TA_Congruence(T,Array(coef))
     elseif path_type==:pwln && (algorithm == :Chen || algorithm == :default)
         return sig_pwln_TA_chen(T,Array(coef))
-    elseif path_type==:pwmon && (algorithm == :ALS26 || algorithm == :default)
-        return sig_pw_mono_ALS26(T,composition,regularity)
-    elseif path_type==:pwmon && (algorithm == :Chen)
+    elseif (path_type == :pwmon && algorithm == :Chen)
         return sig_pw_mono_chen(T,composition,regularity)
+    elseif path_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
+        return sig_pw_mono_ALS26(T,composition,regularity)
     else 
         throw(ArgumentError("sig not supported for given arguments")) 
     end 
@@ -388,14 +390,14 @@ function coreSplineTrafo(m::Vector{Int}, r::Int)
     return B
 end
 
-function sig_pw_mono_chen(TTS::TruncatedTensorAlgebra,m,r=0) 
+function sig_pw_mono_chen(TTS::TruncatedTensorAlgebra,m,r) 
   k = truncation_level(TTS)
   R = base_algebra(TTS)
   d = base_dimension(TTS)
   if d != sum(m) - r*(length(m) -1)
     error("m must be a composition of the ambient dimension")
   end
-  sigs = [Array(embedding_matrix(m,i))*sig(TruncatedTensorAlgebra(R,k,m[i]),:mono) for i in (1:length(m))]
+  sigs = [Array(embedding_matrix(m,i))*sig(TruncatedTensorAlgebra(R,m[i],k),:mono) for i in (1:length(m))]
   res = prod(sigs)
   if r == 0
     return res
@@ -443,10 +445,20 @@ function _Cpwpoly_seq(_trunc_level::Int, m::Vector{Int}, _R)
    return Cmono
 end
 
-function sig_pw_mono_ALS26(TTS::TruncatedTensorAlgebra,m::Vector{Int},r=0)
+function sig_pw_mono_ALS26(TTS::TruncatedTensorAlgebra,m::Vector{Int},r)
+  d = base_dimension(TTS)
+  if d != sum(m) - r*(length(m) -1)
+    error("m must be a composition of the ambient dimension")
+  end
   k = truncation_level(TTS) 
   R = base_algebra(TTS)
-  return TruncatedTensorAlgebraElem(TTS,_Cpwpoly_seq(k,m,R))
+  TM = TruncatedTensorAlgebra(R,sum(m),k)
+  res = TruncatedTensorAlgebraElem(TM,_Cpwpoly_seq(k,m,R))
+  if r == 0
+    return res
+  else
+    return Array(coreSplineTrafo(m,r))*res
+  end
 end
 
 function Base.getindex(x::TruncatedTensorAlgebraElem, w...)

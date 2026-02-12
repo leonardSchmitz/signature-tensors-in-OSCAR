@@ -1066,8 +1066,13 @@ function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) w
 
     sig_m = sigAxis_TA_ClosedForm(Tm)
     sig_n = sigAxis_TA_ClosedForm(Tn)
+    
+    elem_out = Vector{Array{eltype(sig_m.elem[2])}}(undef, k+1)
 
-    elem_out = Vector{Array{eltype(sig_m.elem[2])}}(undef, k)
+    # ─────────────────────────────
+    # Level 0: copy directly
+    # ─────────────────────────────
+    elem_out[1] = sig_m.elem[1]
 
     for j in 1:k
         σ_m = sig_m.elem[j+1]
@@ -1084,7 +1089,7 @@ function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) w
             tensor_j[idx] = σ_m[idx_m...] * σ_n[idx_n...]
         end
 
-        elem_out[j] = tensor_j
+        elem_out[j+1] = tensor_j
     end
 
     return TruncatedTensorAlgebraElem{R, eltype(sig_m.elem[2])}(T, elem_out)
@@ -1094,7 +1099,7 @@ end
 # -------------------------------
 # seq_type == :p2
 # -------------------------------
-function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+function sigAxis_p2_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     k = truncation_level(T)
     d=base_dimension(T)
 
@@ -1179,7 +1184,7 @@ function sigAxis_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     if T.sequence_type == :p2id
         return sigAxis_p2id_Chen(T, m, n)
     elseif T.sequence_type == :p2
-        return sigAxis_p2id_Chen(T, m, n)
+        return sigAxis_p2_Chen(T, m, n)
     else
         error("sequence_type must be :p2id or :p2")
     end
@@ -1203,7 +1208,12 @@ function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     sig_m = sig_axis_TA(Tm)
     sig_n = sig_axis_TA(Tn)
 
-    elem_out = Vector{Array{eltype(sig_m.elem[2])}}(undef, k)
+    elem_out = Vector{Array{eltype(sig_m.elem[2])}}(undef, k+1)
+
+    # ─────────────────────────────
+    # Level 0: copy directly
+    # ─────────────────────────────
+    elem_out[1] = sig_m.elem[1]
 
     for j in 1:k
         σ_m = sig_m.elem[j+1]
@@ -1230,7 +1240,7 @@ end
 # -------------------------------
 # seq_type == :p2
 # -------------------------------
-function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+function sigAxis_p2_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     k = truncation_level(T)
     d=base_dimension(T)
 

@@ -11,18 +11,11 @@ end
 
 function comp_S_Mell(M::Int,ell::Int,r::Int)
   res = [m for m in collect(compositions(M)) if length(m)==ell]
-  #return unique(res)
   return ourFilter(res ,r)
 end
 
 function ourTable(r::Int)
-  # valid M and ell  
   P = lattice_points(polyhedron(([-1 0;0 -1;-2 2*r+1],[-1;-1;2]),([1 -r],[4 - r])))
-  #P = lattice_points(polyhedron(([-1 0;0 -1; 0 1],[-1;-1;9-2*r]),([1 -r],[4 - r])))
-  #P = filter(c -> c[2]!=0, unique(P)) # no words of length 0 
-  #if r >= 1 
-  #  P = filter(c -> c[2]!=1, unique(P)) # no words of length 1
-  #end 
   res = vcat([comp_S_Mell(Int(x[1]),Int(x[2]),r) for x in P]...)
   return res
 end

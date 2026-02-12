@@ -4,7 +4,8 @@ export
   matrix_tensor_congruence, 
   matrix_tensor_congruence_TA,
 #  concatenate_tensors_TA,
-  matrix_tensor_congruence_TA
+  matrix_tensor_congruence_TA, 
+  mode_product
 
 
 #TODO: remove ≤ 
@@ -100,3 +101,45 @@ function matrix_tensor_multiply_TA(matrix::AbstractMatrix, tensor::AbstractArray
 end
 
 
+"""
+    mode_product(T::AbstractArray, A::AbstractMatrix, mode::Int, R)
+
+Compute the mode-n product of tensor `T` with matrix `A` along the specified `mode`.
+
+- `T` : input tensor of any order (dimensions can be for p2id or p2)
+- `A` : matrix of size (d_new × d) to multiply along the `mode` dimension
+- `mode` : the axis along which to multiply
+- `R` : base ring for elements (e.g., QQMPolyRing)
+
+Returns a new tensor with dimension `d_new` along the `mode` axis.
+- If `T` is a level-1 tensor from TruncatedTensorAlgebra, multiplies a vector of ones.
+- For higher levels, performs a linear transformation along the selected mode.
+"""
+function mode_product(T::AbstractArray, A::AbstractMatrix, mode::Int, R)
+    d_new, d = size(A)
+
+    # Check that mode dimension matches
+    dims = size(T)
+    dims[mode] == d || error("Mode $mode has size $(dims[mode]), expected $d")
+
+    # Convert A to base ring elements
+    A_ring = reshape([one_elem(R) * a for a in A], size(A))
+
+    # Move the mode-th axis to the first dimension
+    perm = (mode, setdiff(1:ndims(T), mode)...)
+    T_perm = permutedims(T, perm)
+
+    # Matricize tensor: mode dimension becomes rows
+    T_mat = reshape(T_perm, d, :)
+
+    # Multiply matrix by tensor matricization
+    T_out_mat = A_ring * T_mat   # Linear transform along mode
+
+    # Reshape back to tensor with new mode dimension
+    new_dims = (d_new, dims[1:mode-1]..., dims[mode+1:end]...)
+    T_out = reshape(T_out_mat, new_dims)
+
+    # Permute axes back to original order
+    invp = invperm(perm)
+    return permutedims(T_out, invp)
+end

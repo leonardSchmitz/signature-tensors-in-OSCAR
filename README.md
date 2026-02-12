@@ -28,8 +28,8 @@
    update
    instantiate
    ```
-3. Start the package with  
+5. Start the package with  
    ```
    using Oscar 
-   using signatureTensors
+   using SignatureTensors
    ```

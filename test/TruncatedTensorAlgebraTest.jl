@@ -12,25 +12,25 @@
        @test truncation_level(T) == k
     end
 
-    #function axis_core_3tensor_QQ(_d)
-    #    C = zeros(QQ,_d,_d,_d);
-    #    for al in (1:_d)
-    #      for be in (1:_d)
-    #        for ga in (1:_d)
-    #          if al == be && be == ga
-    #            C[al,be,ga] = QQ(1,6)
-    #          end
-    #          if (al < be && be == ga)||(al == be && be < ga)
-    #            C[al,be,ga] = QQ(1,2)
-    #          end
-    #          if al < be && be < ga
-    #            C[al,be,ga] = one(QQ)
-    #          end
-    #        end
-    #      end
-    #    end
-    #    return C
-    #end
+    function axis_core_3tensor_QQ(_d)
+        C = zeros(QQ,_d,_d,_d);
+        for al in (1:_d)
+          for be in (1:_d)
+            for ga in (1:_d)
+              if al == be && be == ga
+                C[al,be,ga] = QQ(1,6)
+              end
+              if (al < be && be == ga)||(al == be && be < ga)
+                C[al,be,ga] = QQ(1,2)
+              end
+              if al < be && be < ga
+                C[al,be,ga] = one(QQ)
+              end
+            end
+          end
+        end
+        return C
+    end
 
     @testset "Axis constructor in TTA for QQ" begin
         d = 6;
@@ -46,7 +46,7 @@
             @test Caxis_d[i,i] == QQ(1,2) 
             @test Caxis_d[i,i+1] == one(QQ)
         end 
-        #@test axis_core_3tensor_QQ(d) == Caxis_d[:,:,:]
+        @test axis_core_3tensor_QQ(d) == Caxis_d[:,:,:]
         @test zero(T) + Caxis_d == Caxis_d
         @test one(T)*Caxis_d == Caxis_d
         @test Caxis_d*one(T) == Caxis_d
@@ -75,6 +75,31 @@
         @test inv(Caxis_d)*Caxis_d == one(T)
         @test Caxis_d*inv(Caxis_d) == one(T)
         @test inv(inv(Caxis_d)) == Caxis_d
+    end
+
+    @testset "Piecewise monomial in TTA for QQ" begin 
+        d = 6;
+        for r in [0,1]
+          for m in [[1,1,2],[2,3],[2,2,2],[2,1,3,1,1]]
+              l = length(m);
+              M = sum(m);
+              n = sum(m) - r*(l-1); 
+              T = TruncatedTensorAlgebra(QQ,n,4); 
+              S = sig(T,:pwmon,composition=m);
+              @test S == sig(T,:pwmon,composition=m,algorithm=:Chen); 
+              @test S == sig(T,:pwmon,composition=m,algorithm=:ALS26); 
+          end
+        end
+        r = 2;
+        for m in [[2,3,2],[3,3],[4,3]]
+              l = length(m);
+              M = sum(m);
+              n = sum(m) - r*(l-1); 
+              T = TruncatedTensorAlgebra(QQ,n,4); 
+              S = sig(T,:pwmon,composition=m);
+              @test S == sig(T,:pwmon,composition=m,algorithm=:Chen); 
+              @test S == sig(T,:pwmon,composition=m,algorithm=:ALS26); 
+        end
     end
 
     @testset "Pwln constructor in TTA" begin

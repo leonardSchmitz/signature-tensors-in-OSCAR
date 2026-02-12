@@ -11,14 +11,7 @@ export
   bary, 
   bary_Nminus1_samples_fixed_inverse, 
   tensor_sequence, 
-  ideal_of_entries, 
-  embedding_matrix, # should not be exported
-  coreSplineTrafo, # should not be exported 
-  sig_pw_mono,
-  sig_pw_mono_ALS26, 
-  generate_lyndon_words, # should not be here
-  dim_free_nil_lie_alg, # should not be here
-  ideal_of_lyndon_entries
+  ideal_of_entries
   
 """
     TruncTensorSeq(base_ring::QQMPolyRing, trunc_level::Int, amb_dim::Int)
@@ -284,149 +277,6 @@ function sig_axis(TTS::TruncTensorSeq)
   #return evaluate(chen,sample) #TODO: this should be the same as multiplication of the signatuers directly, without fromal chen and eval 
 end
 
-function embedding_matrix(m::Vector{Int},i::Int)
-  M = sum(m)
-  A = zero_matrix(QQ,M,m[i])
-  A[sum(m[1:i-1])+1:sum(m[1:i]),:] = identity_matrix(QQ,m[i])
-  return A 
-end
-
-function nextBlock(A, r::Int, mi)
-    nrows, ncols = size(A)
-    vecs = zeros(QQ, ncols, r)
-    for i in 1:r
-        for j in 1:ncols
-            vecs[j, i] = binomial(j, i)
-        end
-    end
-    return matrix(QQ,Matrix(A) * Matrix(vecs))
-end
-
-function coreSplineTrafo(m::Vector{Int}, r::Int)
-    total_dim = sum(m)
-    if r == 0
-        return identity_matrix(QQ,total_dim)
-    end
-    zz = 1 
-    crb = identity_matrix(QQ,m[1])
-    B = crb
-    while zz < length(m)
-        nr = size(B, 2)
-        start_col = nr - m[zz] + 1
-        end_col   = nr
-        subB = B[:, start_col:end_col]
-        nb = nextBlock(subB, r, zz)
-        idpart = identity_matrix(QQ,m[zz+1] - r)
-        B = block_diagonal_matrix([hcat(B, nb), idpart])
-        zz += 1
-    end
-    return B
-end 
-
-
-"""
-    sig_pw_mono(TTS::TruncTensorSeq, m)
-
-Constructs the **piecewise monomial signature** of a truncated tensor sequence `TTS` 
-according to a composition `m` of the ambient dimension.
-
-This function computes the tensor sequence signature by splitting the ambient dimension 
-into blocks specified by `m` and applying `matrix_tensorSeq_congruence` and `sig_mono` 
-to each block. The results are then multiplied together to obtain the piecewise signature.
-
-# Arguments
-- `TTS::TruncTensorSeq`: the parent truncated tensor sequence.
-- `m::Vector{Int}`: a composition of the ambient dimension (vector of positive integers summing to `ambient_dimension(TTS)`).
-
-# Returns
-- `TruncTensorSeqElem`: the piecewise monomial signature element corresponding to the composition `m`.
-
-# Example
-d, k = 4, 2
-R, vars = polynomial_ring_sig_transform(d,2)
-TTS = trunc_tensor_seq(R, k, d)
-m = [2,2]  # composition of the ambient dimension
-pw_mono_sig = sig_pw_mono(TTS, m)
-"""
-sig_pw_mono
-
-function sig_pw_mono(TTS::TruncTensorSeq,m,r=0)
-  k = truncation_level(TTS) 
-  R = base_ring(TTS)
-  d = ambient_dimension(TTS)
-  if d != sum(m) - r*(length(m) -1)
-    error("m must be a composition of the ambient dimension") 
-  end 
-  res = matrix_tensorSeq_congruence(Array(embedding_matrix(m,1)),sig_mono(trunc_tensor_seq(R,k,m[1]))) 
-  for i in (2:length(m))
-    res = res*matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) 
-  end
-  #sigs = [matrix_tensorSeq_congruence(Array(embedding_matrix(m,i)),sig_mono(trunc_tensor_seq(R,k,m[i]))) for i in (1:length(m))]
-  #res = prod(sigs)
-  if r == 0 
-    return res
-  else 
-    return matrix_tensorSeq_congruence(Array(coreSplineTrafo(m,r)),res)
-  end
-end
-
-"""
-    adapted_word(w, m)
-
-Check whether the word `w` (Vector{Int}) is adapted to the composition `m`
-(Vector{Int}).
-
-Returns:
-- `false` if `w` is not adapted
-- otherwise a vector `[v₁, …, v_ℓ]` where each `vᵢ` is a word over `[mᵢ]`
-"""
-function adapted_word(w::Vector{Int}, m::Vector{Int})
-    ℓ = length(m)
-    offsets = cumsum([0; m[1:end-1]])  # ∑_{j<i} m_j
-
-    blocks = [Int[] for _ in 1:ℓ]
-    current = 1
-
-    for x in w
-        while current ≤ ℓ && x > offsets[current] + m[current]
-            current += 1
-        end
-        if current > ℓ || x ≤ offsets[current]
-            return false,[]
-        end
-        push!(blocks[current], x)
-    end
-
-    # subtract offsets to get words over [mᵢ]
-    return true,[blocks[i] .- offsets[i] for i in 1:ℓ]
-end
-
-function _Cpwpoly(_k::Int, m::Vector{Int}, _R::QQMPolyRing)
-   M = sum(m)
-   res = zeros(_R, M*ones(Int,_k)...)
-   for idx in CartesianIndices(res)
-       if _k ==0 
-         res[idx] = one(_R)
-       else
-         b,vs = adapted_word(collect(Tuple(idx)),m)
-         if b
-           res[idx] = prod([QQ(prod(v),prod(cumsum(v))) for v in vs])*one(_R)
-         end
-       end 
-   end
-   return res
-end
-
-function _Cpwpoly_seq(_trunc_level::Int, m::Vector{Int}, _R::QQMPolyRing)
-   Cmono = [_Cpwpoly(i,m, _R) for i in (0:_trunc_level)]
-   return Cmono
-end
-
-function sig_pw_mono_ALS26(TTS::TruncTensorSeq,m::Vector{Int},r=0)
-  k = truncation_level(TTS) 
-  R = base_ring(TTS)
-  return TruncTensorSeqElem(TTS,_Cpwpoly_seq(k,m,R))
-end
 
 function Base.Matrix(a::TruncTensorSeqElem)
   return tensor_sequence(a)[3]
@@ -469,49 +319,6 @@ function ideal_of_entries(a::TruncTensorSeqElem)
   temp = (tensor_sequence(a))[2:k+1]
   gens4learn = vcat([vec(temp[i]) for i in (1:length(temp))]...)
   return  ideal(R,gens4learn)
-end
-
-function nextword(k::Int, w::Vector{Int}, alphabet::Vector{Int})
-    # repeat w enough times and truncate to length n
-    reps = (k ÷ length(w)) + 1
-    x = repeat(w, reps)[1:k]
-    # remove trailing maximal letters
-    while !isempty(x) && x[end] == alphabet[end]
-        pop!(x)
-    end
-    if !isempty(x)
-        last_char = x[end]
-        next_char_index = findfirst(==(last_char), alphabet) + 1
-        x[end] = alphabet[next_char_index]
-    end
-    return x
-end
-
-
-function generate_lyndon_words(k::Int, alphabet::Vector{Int})
-    lwords = Vector{Vector{Int}}()
-    w = [alphabet[1]]
-    while length(w) <= k
-        push!(lwords, copy(w))
-        w = nextword(k, w, alphabet)
-        isempty(w) && break
-    end
-    return lwords
-end
-
-function dim_free_nil_lie_alg(d::Int,k::Int)
-  return sum([div(moebius_mu(a)*d^(div(ell,a)),ell) for ell in (1:k) for a in (1:k) if divides(ell,a)[1]])
-end
-
-function ideal_of_lyndon_entries(tts::TruncTensorSeqElem)
-  A = parent(tts)
-  R = base_ring(A)
-  d = ambient_dimension(A)
-  k = truncation_level(A)
-  lynd = generate_lyndon_words(k, Vector((1:d)))
-  res = ideal(R,zero(R))
-  elem_tts = tensor_sequence(tts)
-  return ideal(R,[elem_tts[length(w)+1][w...] for w in lynd])
 end
 
 

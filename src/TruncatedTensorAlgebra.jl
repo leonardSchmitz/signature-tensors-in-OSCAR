@@ -54,9 +54,7 @@ struct TruncatedTensorAlgebraElem{R,E}
 end
 
 truncation_level(F::TruncatedTensorAlgebra) = F.truncation_level
-#ambient_dimension(F::TruncatedTensorAlgebra) = F.base_dimension
 base_dimension(F::TruncatedTensorAlgebra) = F.base_dimension
-#base_ring(F::TruncatedTensorAlgebra) = F.base_algebra
 base_algebra(F::TruncatedTensorAlgebra) = F.base_algebra
 sequence_type(F::TruncatedTensorAlgebra) = F.sequence_type
 
@@ -151,7 +149,7 @@ function Base.zero(T::TruncatedTensorAlgebra{R}) where R
 
     k = truncation_level(T)
     d = base_dimension(T)
-    RA = base_algebra(T)   # or base_ring(T)
+    RA = base_algebra(T)   
     seq = T.sequence_type
     E = typeof(one(RA))
 
@@ -217,6 +215,8 @@ end
 function sig(T::TruncatedTensorAlgebra{R},
              path_type::Symbol; 
              coef=[], 
+             composition=Int[],
+             regularity::Int=0,
              algorithm::Symbol=:default) where R
     if path_type==:point && coef==[] && algorithm == :default
         return one(T)
@@ -228,6 +228,10 @@ function sig(T::TruncatedTensorAlgebra{R},
         return sig_pwln_TA_Congruence(T,Array(coef))
     elseif path_type==:pwln && (algorithm == :Chen || algorithm == :default)
         return sig_pwln_TA_chen(T,Array(coef))
+    elseif path_type==:pwmon && (algorithm == :ALS26 || algorithm == :default)
+        return sig_pw_mono_ALS26(T,composition,regularity)
+    elseif path_type==:pwmon && (algorithm == :Chen)
+        return sig_pw_mono_chen(T,composition,regularity)
     else 
         throw(ArgumentError("sig not supported for given arguments")) 
     end 
@@ -341,7 +345,109 @@ function sig_mono_TA(T::TruncatedTensorAlgebra{R}) where R
     return TruncatedTensorAlgebraElem{R, E}(T, seq)
 end
 
+#######################
+# Pw polynomial paths
+#######################
 
+function embedding_matrix(m::Vector{Int},i::Int)
+  M = sum(m)
+  A = zero_matrix(QQ,M,m[i])
+  A[sum(m[1:i-1])+1:sum(m[1:i]),:] = identity_matrix(QQ,m[i])
+  return A
+end
+
+function nextBlock(A, r::Int, mi)
+    nrows, ncols = size(A)
+    vecs = zeros(QQ, ncols, r)
+    for i in 1:r
+        for j in 1:ncols
+            vecs[j, i] = binomial(j, i)
+        end
+    end
+    return matrix(QQ,Matrix(A) * Matrix(vecs))
+end
+
+function coreSplineTrafo(m::Vector{Int}, r::Int) 
+    total_dim = sum(m)
+    if r == 0
+        return identity_matrix(QQ,total_dim)
+    end
+    zz = 1
+    crb = identity_matrix(QQ,m[1])
+    B = crb
+    while zz < length(m)
+        nr = size(B, 2)
+        start_col = nr - m[zz] + 1
+        end_col   = nr
+        subB = B[:, start_col:end_col]
+        nb = nextBlock(subB, r, zz)
+        idpart = identity_matrix(QQ,m[zz+1] - r)
+        B = block_diagonal_matrix([hcat(B, nb), idpart])
+        zz += 1
+    end
+    return B
+end
+
+function sig_pw_mono_chen(TTS::TruncatedTensorAlgebra,m,r=0) 
+  k = truncation_level(TTS)
+  R = base_algebra(TTS)
+  d = base_dimension(TTS)
+  if d != sum(m) - r*(length(m) -1)
+    error("m must be a composition of the ambient dimension")
+  end
+  sigs = [Array(embedding_matrix(m,i))*sig(TruncatedTensorAlgebra(R,k,m[i]),:mono) for i in (1:length(m))]
+  res = prod(sigs)
+  if r == 0
+    return res
+  else
+    return Array(coreSplineTrafo(m,r))*res
+  end
+end
+
+function adapted_word(w::Vector{Int}, m::Vector{Int})
+    ell = length(m)
+    offsets = cumsum([0; m[1:end-1]])  
+    blocks = [Int[] for _ in 1:ell]
+    current = 1
+    for x in w
+        while current <= ell && x > offsets[current] + m[current]
+            current += 1
+        end
+        if current > ell || x ≤ offsets[current]
+            return false,[]
+        end
+        push!(blocks[current], x)
+    end
+    # subtract offsets to get words over [mi]
+    return true,[blocks[i] .- offsets[i] for i in 1:ell]
+end
+
+function _Cpwpoly(_k::Int, m::Vector{Int}, _R)
+   M = sum(m)
+   res = zeros(_R, M*ones(Int,_k)...)
+   for idx in CartesianIndices(res)
+       if _k ==0 
+         res[idx] = one(_R)
+       else
+         b,vs = adapted_word(collect(Tuple(idx)),m)
+         if b
+           res[idx] = prod([QQ(prod(v),prod(cumsum(v))) for v in vs])*one(_R)
+         end
+       end 
+   end
+   return res
+end
+
+function _Cpwpoly_seq(_trunc_level::Int, m::Vector{Int}, _R)
+   Cmono = [_Cpwpoly(i,m, _R) for i in (0:_trunc_level)]
+   return Cmono
+end
+
+function sig_pw_mono_ALS26(TTS::TruncatedTensorAlgebra,m::Vector{Int},r=0)
+  k = truncation_level(TTS) 
+  R = base_algebra(TTS)
+  return TruncatedTensorAlgebraElem(TTS,_Cpwpoly_seq(k,m,R))
+end
 
 function Base.getindex(x::TruncatedTensorAlgebraElem, w...)
     k=length(w)
@@ -385,7 +491,16 @@ end
 #end
 
 
-
+function ideal_of_lyndon_entries(x::TruncatedTensorAlgebraElem)
+  A = parent(x)
+  R = base_algebra(A)
+  d = ambient_dimension(A)
+  k = truncation_level(A)
+  lynd = generate_lyndon_words(k, Vector((1:d)))
+  #res = ideal(R,zero(R))
+  elem_tts = tensor_sequence(x)
+  return ideal(R,[elem_tts[length(w)+1][w...] for w in lynd])
+end
 
 
 # ----------------------------

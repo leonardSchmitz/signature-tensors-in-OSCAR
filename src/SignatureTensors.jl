@@ -23,6 +23,7 @@ include("FreeTruncSigAlgMultiv.jl")
 include("TruncTensorSeq.jl")           # to be removed soon 
 include("matrixOperations.jl")
 include("TruncatedTensorAlgebra.jl")
+include("tensorLearningSch25.jl")
 
 
 end 

@@ -32,4 +32,18 @@
         @test normal_form.(a, Ref(I+ideal(R,[f]))) == Matrix{QQMPolyRingElem}(R.(A))
     end
 
+    @testset "tensor learning with Sch25" begin
+      for d in [2,3,4,10]
+        C = axis_core_tensor_normalized_3(d);
+        nr_rec = 1000;
+        for t in (1:nr_rec)
+          A = generic_transform_GL(d);
+          G = matrix_tensor_congruence_3(A,C);
+          Q = tensor_learning_3(G);
+          @assert matrix_tensor_congruence_3(Q,G) == C
+          @assert inv(Q) == A
+        end
+      end
+    end
+
 end

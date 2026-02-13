@@ -48,7 +48,7 @@ function generic_transform_GL(_d,_max_int=10)
    if is_invertible( matrix(QQ,A))
      return A
    else
-     return generic_transform(_d,_max_int)
+     return generic_transform_GL(_d,_max_int)
    end
 end
 

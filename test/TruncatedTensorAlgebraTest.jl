@@ -53,6 +53,9 @@
         @test inv(Caxis_d)*Caxis_d == one(T)
         @test Caxis_d*inv(Caxis_d) == one(T)
         @test inv(inv(Caxis_d)) == Caxis_d
+        @test exp(log(Caxis_d)) == Caxis_d
+        @test Caxis_d^3 == Caxis_d*Caxis_d*Caxis_d
+        @test exp(log(Caxis_d) + log(Caxis_d)) == Caxis_d^2
     end
 
     @testset "Axis constructor in TTA for polynomial rings" begin
@@ -75,6 +78,9 @@
         @test inv(Caxis_d)*Caxis_d == one(T)
         @test Caxis_d*inv(Caxis_d) == one(T)
         @test inv(inv(Caxis_d)) == Caxis_d
+        @test exp(log(Caxis_d)) == Caxis_d
+        @test Caxis_d^3 == Caxis_d*Caxis_d*Caxis_d
+        @test exp(log(Caxis_d) + log(Caxis_d)) == Caxis_d^2
     end
 
     @testset "Piecewise monomial in TTA for QQ" begin 
@@ -88,6 +94,15 @@
               S = sig(T,:pwmon,composition=m,regularity=r);
               @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:Chen); 
               @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:ALS26); 
+              @test zero(T) + S == S
+              @test one(T)*S == S
+              @test S*one(T) == S
+              @test inv(S)*S == one(T)
+              @test S*inv(S) == one(T)
+              @test inv(inv(S)) == S
+              @test exp(log(S)) == S
+              @test S^3 == S*S*S
+              @test exp(log(S) + log(S)) == S^2
           end
         end
         r = 2;
@@ -99,6 +114,15 @@
               S = sig(T,:pwmon,composition=m,regularity=r);
               @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:Chen); 
               @test S == sig(T,:pwmon,composition=m,regularity=r,algorithm=:ALS26); 
+              @test zero(T) + S == S
+              @test one(T)*S == S
+              @test S*one(T) == S
+              @test inv(S)*S == one(T)
+              @test S*inv(S) == one(T)
+              @test inv(inv(S)) == S
+              @test exp(log(S)) == S
+              @test S^3 == S*S*S
+              @test exp(log(S) + log(S)) == S^2
         end
     end
 
@@ -120,6 +144,9 @@
           @test inv(S)*S == one(T)
           @test S*inv(S) == one(T)
           @test inv(inv(S)) == S
+          @test exp(log(S)) == S
+          @test S^3 == S*S*S
+          @test exp(log(S) + log(S)) == S^2
           for m1 in 1:m-1     # decompose via Chen
             A1 = A[:,1:m1]
             A2 = A[:,m1+1:m]

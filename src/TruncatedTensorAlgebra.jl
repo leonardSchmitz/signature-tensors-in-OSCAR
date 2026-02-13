@@ -677,7 +677,7 @@ end
 
 function leading_coefficient_and_zero_TA(p)
     if is_zero(p)
-        return zero(typeof(p))
+        return leading_coefficient(one(parent(p))) - leading_coefficient(one(parent(p))) # TODO: its zero 
     else
         return leading_coefficient(p)
     end

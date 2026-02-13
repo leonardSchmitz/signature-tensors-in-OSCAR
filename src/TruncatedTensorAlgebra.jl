@@ -27,7 +27,38 @@ export TruncatedTensorAlgebra,
        #applyMatrixToTTA, 
        #sig2parPoly
 
-    
+"""
+TruncatedTensorAlgebra{R}
+
+Structure that stores a **truncated signature** of a rough path or a
+two-parameter object (membrane).
+
+Concrete signatures are stored as elements of this algebra via
+[`TruncatedTensorAlgebraElem`](@ref).
+
+# Fields
+- `base_algebra::R`  
+  Base algebra over which the signature is defined.
+
+- `base_dimension::Int`  
+  Dimension `d` of the underlying path or membrane.
+
+- `truncation_level::Int`  
+  Truncation level `k` of the signature.
+
+- `sequence_type::Symbol`  
+  Type of signature:
+  - `:iis`   — iterated-integrals signature of a rough path,
+  - `:p2id`  — two-parameter signature for membranes
+
+# Mathematical meaning
+This object represents the truncated signature space
+ S^{k}(X) = (1, S^1(X), dots, S^k(X)), 
+where the precise tensor structure depends on `sequence_type`.
+
+See also [`TruncatedTensorAlgebraElem`](@ref).
+"""
+
 
 
 
@@ -37,6 +68,36 @@ struct TruncatedTensorAlgebra{R}
     truncation_level::Int
     sequence_type::Symbol
 end
+
+"""
+    TruncatedTensorAlgebraElem{R,E}
+
+Concrete **truncated signature** of a rough path or membrane.
+
+This object stores the actual tensor coefficients of the signature up to
+a fixed truncation level.
+
+# Type Parameters
+- `R`: base algebra of the parent signature object.
+- `E`: type of the coefficients at each tensor level.
+
+# Fields
+- `parent::TruncatedTensorAlgebra{R}`  
+  Signature metadata (dimension, truncation level, type).
+
+- `elem::Vector{Array{E}}`  
+  Sequence of tensors representing the signature:
+    - `elem[:] level 1  (vector),
+    - `elem[:,:]`: level 2,
+    - `elem[:,:,:, ..., :]`: level k,
+
+# Mathematical meaning
+This object represents a truncated signature
+
+S^{k}(X) = (1, S^1(X), ..., S^k(X)),
+
+where each `S^i(X)` is a tensor of order `i`.
+"""
 
 struct TruncatedTensorAlgebraElem{R,E}
     parent::TruncatedTensorAlgebra{R}
@@ -51,6 +112,47 @@ sequence_type(F::TruncatedTensorAlgebra) = F.sequence_type
 Base.parent(a::TruncatedTensorAlgebraElem) = a.parent
 tensor_sequence(a::TruncatedTensorAlgebraElem) = a.elem
 
+
+"""
+    TruncatedTensorAlgebra(R, d::Int, k::Int; sequence_type = :iis)
+
+Create a container that stores **truncated signatures** of rough paths or
+two-parameter objects (membranes).
+
+# Arguments
+- `R`  
+  Base algebra of the signature coefficients.
+
+- `d::Int`  
+  Dimension of the underlying path or membrane.
+  Must satisfy `d ≥ 0`.
+
+- `k::Int`  
+  Truncation level of the signature.
+  Must satisfy `k ≥ 0`.
+
+# Keyword Arguments
+- `sequence_type::Symbol = :iis`  
+  Type of signature to be stored:
+  - `:iis`   — iterated-integrals signature of a rough path,
+  - `:p2id`  — signature of a membrane,
+
+# Returns
+- `TruncatedTensorAlgebra{typeof(R)}`
+
+# Errors
+- Throws an error if `d < 0`.
+- Throws an error if `k < 0`.
+- Throws an error if `sequence_type` is not one of
+  `(:iis, :p2id, :p2)`.
+
+# Example
+
+A = TruncatedTensorAlgebra(QQ, 2, 3; sequence_type = :iis)
+
+This creates a container for truncated signatures of a 2-dimensional
+rough path, truncated at level 3.
+"""
 function TruncatedTensorAlgebra(R, d::Int, k::Int; sequence_type::Symbol=:iis)
 
     d >= 0 || error("ambient dimension must be >= 0")
@@ -123,6 +225,29 @@ end
 
 #### Base Constructor
 
+"""
+    Base.zero(T::TruncatedTensorAlgebra)
+
+Return the **zero truncated signature** associated with the truncated tensor
+algebra `T`.
+
+This function constructs a `TruncatedTensorAlgebraElem` whose tensor
+coefficients are identically zero at all levels. It represents the additive
+identity in the space of truncated signatures.
+
+# Arguments
+- `T::TruncatedTensorAlgebra`  
+
+# Returns
+- `TruncatedTensorAlgebraElem`  
+  An element of `T` whose tensor coefficients are zero at every level.
+
+# Example
+T = TruncatedTensorAlgebra(QQ, 3, 2; sequence_type = :iis)
+z = zero(T)
+"""
+
+
 function Base.zero(T::TruncatedTensorAlgebra{R}) where R
 
     k = truncation_level(T)
@@ -169,7 +294,24 @@ function Base.zero(T::TruncatedTensorAlgebra{R}) where R
     return TruncatedTensorAlgebraElem{R,E}(T, elem)
 end
 
+"""
+    one(T::TruncatedTensorAlgebra)
 
+Return the **identity truncated signature** associated with the truncated tensor
+algebra `T`.
+
+
+# Arguments
+- `T::TruncatedTensorAlgebra`  
+
+# Returns
+- `TruncatedTensorAlgebraElem`  
+  An element of `T` whose tensor coefficients are the identity signature.
+
+# Example
+T = TruncatedTensorAlgebra(QQ, 3, 2; sequence_type = :iis)
+z = one(T)
+"""
 
 
 function Base.one(T::TruncatedTensorAlgebra{R}) where R
@@ -186,6 +328,65 @@ function Base.one(T::TruncatedTensorAlgebra{R}) where R
     end
 end
 
+
+"""
+    sig(
+        T::TruncatedTensorAlgebra,
+        path_type::Symbol;
+        coef = [],
+        composition::Vector{Int} = Int[],
+        regularity::Int = 0,
+        algorithm::Symbol = :default
+    )
+
+Compute the **truncated signature** associated with a specified path type
+inside the truncated tensor algebra `T`.
+
+# Arguments
+- `T::TruncatedTensorAlgebra`  
+  Truncated tensor algebra specifying the dimension, truncation level,
+  base algebra, and signature type.
+
+- `path_type::Symbol`  
+  Type of path whose signature is to be computed. Supported values include:
+  
+  # Path types and algorithms
+
+ path_type = :point
+   Creates the signature of a constant path.
+   This corresponds to the unit signature, where the level-0 component is 1
+   and all higher levels are zero.
+
+ path_type = :axis
+   Creates the signature of an axis path, i.e. a path that moves only along
+   coordinate axes.
+
+   Additional arguments:
+     algorithm = :AFS19
+       Computes the signature explicitly using closed-form formulas.
+
+     algorithm = :Chen
+       Computes the signature using Chen’s identity.
+
+  path_type = :mono
+   Computes the signature of a monomial path.
+
+ path_type = :pwln
+ Computes the signature of a piecewise linear path.
+
+   Additional arguments:
+     coef
+       Matrix of coefficients describing the piecewise linear path.
+
+     algorithm = :Chen
+       Computes the signature using Chen’s identity.
+
+     algorithm = :congruence
+       Computes the signature using matrix tensor congruence.
+
+  path_type = :pwmon
+"""
+sig
 function sig(T::TruncatedTensorAlgebra{R},
              path_type::Symbol; 
              coef=[], 
@@ -450,6 +651,21 @@ function Base.:(==)(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem
     end
 end
 
+
+
+# =========================
+# Addition and Subtraction
+# =========================
+
+"""
+    Base.:+(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
+
+Element-wise addition of two truncated signatures.
+
+- Only defined for `sequence_type == :iis`.
+- Returns a new `TruncatedTensorAlgebraElem` whose tensors are the sum of
+  the corresponding levels of `a` and `b`.
+"""
 function Base.:+(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
     if parent(a).sequence_type == :iis && parent(b).sequence_type == :iis
         A = parent(a)
@@ -460,6 +676,17 @@ function Base.:+(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
     end
 end
 
+
+"""
+    Base.:-(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
+
+Element-wise subtraction of two truncated signatures.
+
+- Only defined for `sequence_type == :iis`.
+- Returns a new `TruncatedTensorAlgebraElem` whose tensors are the difference
+  of the corresponding levels of `a` and `b`.
+- Analogous to `+` but performs subtraction.
+"""
 function Base.:-(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
     if parent(a).sequence_type == :iis && parent(b).sequence_type == :iis
         A = parent(a)
@@ -473,6 +700,20 @@ end
 
 
 
+# =========================
+# Multiplication (Chen / Congruence / Scalar)
+# =========================
+
+"""
+    Base.:*(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
+
+Chen product (truncated tensor algebra multiplication) of two signatures.
+
+- Only defined for `sequence_type == :iis`.
+- Uses free truncated algebra and evaluates the product using Chen’s identity.
+- Returns a new `TruncatedTensorAlgebraElem` representing the concatenation
+  of `a` and `b`.
+"""
 
 function Base.:*(a::TruncatedTensorAlgebraElem{R,E}, 
                  b::TruncatedTensorAlgebraElem{R,E}) where {R,E}
@@ -485,6 +726,16 @@ function Base.:*(a::TruncatedTensorAlgebraElem{R,E},
     return evaluate(chen, [a, b])
 end
 
+"""
+    Base.:*(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
+
+Matrix-tensor congruence multiplication.
+
+- Only defined for `sequence_type == :iis`.
+- Left-multiplies a truncated signature by a matrix using a tensor congruence
+  operation.
+"""
+
 function Base.:*(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
     T = parent(x)
 
@@ -496,6 +747,17 @@ function Base.:*(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
 
 end
 
+
+"""
+    Base.:*(a::Number, b::TruncatedTensorAlgebraElem)
+
+Scalar multiplication of a truncated signature.
+
+- Only defined for `sequence_type == :iis`.
+- Multiplies each tensor level by the scalar `a`.
+- Supports numbers (`Number`) or algebra elements (`FieldElem` / `R`).
+- Returns a new `TruncatedTensorAlgebraElem`.
+"""
 
 
 function Base.:*(a::FieldElem, b::TruncatedTensorAlgebraElem)
@@ -541,6 +803,20 @@ function Base.:*(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
     end
 end
 
+
+# =========================
+# Inverse and Powers
+# =========================
+
+"""
+    Base.:inv(a::TruncatedTensorAlgebraElem)
+
+Multiplicative inverse (Chen inverse) of a truncated signature.
+
+- Only defined for `sequence_type == :iis`.
+- Returns `a^{-1}` in the truncated tensor algebra using free algebra inversion.
+"""
+
 function Base.:inv(a::TruncatedTensorAlgebraElem)
     if parent(a).sequence_type == :iis
         A = parent(a)
@@ -552,6 +828,17 @@ function Base.:inv(a::TruncatedTensorAlgebraElem)
         throw(ArgumentError("inv only defined for sequence_type == :iis"))
     end
 end
+
+
+"""
+    Base.:^(a::TruncatedTensorAlgebraElem, n::Int)
+
+Exponentiation of a truncated signature.
+
+- Only defined for `sequence_type == :iis`.
+- For `n >= 0`, returns `a^n` (n-fold Chen product).
+- For `n < 0`, uses the inverse: `a^n = (inv(a))^(-n)`.
+"""
 
 function Base.:^(a::TruncatedTensorAlgebraElem, n::Int)
     if parent(a).sequence_type == :iis
@@ -568,6 +855,24 @@ function Base.:^(a::TruncatedTensorAlgebraElem, n::Int)
     end
 end
 
+# =========================
+# Exponential and Logarithm
+# =========================
+
+"""
+    Base.:exp(a::TruncatedTensorAlgebraElem)
+
+Exponential of a truncated signature.
+
+- Only defined for `sequence_type == :iis`.
+- Computes the exponential in the free truncated tensor algebra:
+  
+    exp(a) = sum_{n=0}^{infty} frac{a^n}{n!}
+  
+  truncated to the algebra’s level.
+"""
+
+
 function Base.:exp(a::TruncatedTensorAlgebraElem)
     if parent(a).sequence_type == :iis
         A = parent(a)
@@ -579,6 +884,22 @@ function Base.:exp(a::TruncatedTensorAlgebraElem)
         throw(ArgumentError("exp only defined for sequence_type == :iis"))
     end
 end
+
+
+
+"""
+    Base.:log(a::TruncatedTensorAlgebraElem)
+
+Logarithm of a truncated signature.
+
+- Only defined for `sequence_type == :iis`.
+- Computes the logarithm in the free truncated tensor algebra:
+  
+    log(a) = sum_{n=1}^{infty} (-1)^{n+1} \frac{(a - 1)^n}{n}
+  
+  truncated to the algebra’s level.
+"""
+
 
 function Base.:log(a::TruncatedTensorAlgebraElem)
     if parent(a).sequence_type == :iis

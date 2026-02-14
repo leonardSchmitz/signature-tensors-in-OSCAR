@@ -7,6 +7,8 @@ export TruncatedTensorAlgebra,
        tensor_sequence,
        zero,
        one,
+       bary,
+       bary_all_but_last_samples_fixed_inverse, 
        sig
        #matrix_tensorAlg_congruence_TA,
 
@@ -363,7 +365,8 @@ inside the truncated tensor algebra `T`.
 
    Additional arguments:
      algorithm = :AFS19
-       Computes the signature explicitly using closed-form formulas.
+       Computes the signature explicitly using closed-form formulas;
+       see Amendola-Friz-Sturmfels "Varieties of Signature Tensors" 2019
 
      algorithm = :Chen
        Computes the signature using Chen’s identity.
@@ -914,9 +917,70 @@ function Base.:log(a::TruncatedTensorAlgebraElem)
 end
 
 
+### Barycenter 
 
 
+function bary(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
+    return bary_TA(bs) #TODO: more oprions 
+end 
 
+function bary_2samples_TA(a::TruncatedTensorAlgebraElem, 
+                          b::TruncatedTensorAlgebraElem)
+  return a*exp(QQ(1,2)*log(inv(a)*b))
+end
+
+function bary_TA(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
+  TTSm = parent(bs[1])
+  res = one(TTSm)
+  k = truncation_level(TTSm)
+  N = length(bs)
+  p = bary_defining_polynomial_system(k,N) 
+  s = gens_in_shape(parent(p))
+  y = s[:,N+1]
+  for j in (1:k)
+    pj = graded_component(p,j)
+    res_seq = tensor_sequence(res)
+    bs_new = [bs;res]
+    res_seq[j+1] = tensor_sequence(evaluate(pj+y[j],bs_new))[j+1]
+    res = TruncatedTensorAlgebraElem(TTSm,res_seq) 
+  end 
+  return res 
+end
+
+function bary_all_but_last_samples_fixed_inverse(bs::Vector{TruncatedTensorAlgebraElem{R, E}},
+                                                 y::TruncatedTensorAlgebraElem{R, E}) where {R, E}
+  TTSm = parent(bs[1])
+  res = one(TTSm)
+  k = truncation_level(TTSm)
+  N = length(bs) + 1
+  p = bary_defining_polynomial_system(k,N) 
+  s = gens_in_shape(parent(p))
+  xN = s[:,N]
+  for j in (1:k)
+    pj = graded_component(p,j)
+    res_seq = tensor_sequence(res)
+    bs_new = [[bs[1:N-1];res];y]
+    res_seq[j+1] = tensor_sequence(evaluate(-QQ(N,1)*pj+xN[j],bs_new))[j+1]
+    res = TruncatedTensorAlgebraElem(TTSm,res_seq) 
+  end 
+  return res 
+end
+
+function bary_2nd_trunc_TA(bs::Vector{TruncTensorSeqElem})
+  N = length(bs)
+  return exp(QQ(1,N)*sum(log.(bs))) 
+end
+
+function bary_2nd_trunc_closedform_TA(bs::Vector{TruncTensorSeqElem})
+  TTSm = parent(bs[1])
+  N = length(bs)
+  ls = tensor_sequence.(bs)
+  vec = QQ(1,N).*sum(ls[i][2] for i in (1:N))
+  mat = QQ(1,N).*sum(ls[i][3] for i in (1:N)) - QQ(1,2*N).*sum(ls[i][2]*transpose(ls[i][2]) for i in (1:N)) + QQ(1,2*N^2).*sum(ls[i1][2]*transpose(ls[i2][2]) for i1 in (1:N) for i2 in (1:N))
+  return trunc_tensor_seq_elem(TTSm,[ls[1][1],vec,mat])
+end
+
+### Ideal constuctors
 
 
 function ideal_of_lyndon_entries(x::TruncatedTensorAlgebraElem)

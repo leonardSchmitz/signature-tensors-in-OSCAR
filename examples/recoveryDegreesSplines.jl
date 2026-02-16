@@ -111,3 +111,32 @@ get_recovery_degree_geometric_spline(3,3,1,[3,1,2]) # 84
 get_recovery_degree_geometric_spline(3,3,1,[2,2,2]) # 90
 get_recovery_degree_geometric_spline(3,3,2,[4,2]) # 312
 get_recovery_degree_geometric_spline(3,3,2,[3,3]) # 168
+
+
+
+
+
+function get_dim_and_degree_parametric_spline_signature_image_k4(d::Int,r::Int,m)
+  l = length(m); k = 4;
+  n = sum(m) - r*(l-1);    # dim for core tensor of spline
+  R,a,s4,s3,s2,s1 = polynomial_ring(QQ, :a => (1:d, 1:n),:s4 => (1:d,1:d,1:d,1:d),:s3 => (1:d,1:d,1:d),:s2 => (1:d,1:d),:s1 => (1:d));
+  #R,a,s1,s2,s3,s4 = polynomial_ring(QQ, :a => (1:d, 1:n),:s1 => (1:d),:s2 => (1:d,1:d),:s3 => (1:d,1:d,1:d),:s4 => (1:d,1:d,1:d,1:d));
+  TTSn = TruncatedTensorAlgebra(R,n,k);
+  C = sig(TTSn,:pwmon,composition=m,regularity=r);
+  aC = a*C;
+  s0 = tensor_sequence(one(TTSn))[1];
+  s = TruncatedTensorAlgebraElem(parent(aC),[s0,s1,s2,s3,s4]);
+  I = ideal(R,vec(aC-s));
+  LI = leading_monomial.(groebner_basis_f4(I,eliminate=n*d));
+  dimI = dim(ideal(R,LI))-n*d
+  degI = degree(ideal(R,LI));
+  return dimI,degI
+end
+
+# dimension of the image 
+# table 1
+get_dim_and_degree_parametric_spline_signature_image_k4(2,0,[1,1,1]) # (6, 276) 
+get_dim_and_degree_parametric_spline_signature_image_k4(2,1,[1,1,1]) # (2, 16)
+get_dim_and_degree_parametric_spline_signature_image_k4(2,1,[2,1]) # (4, 96)
+get_dim_and_degree_parametric_spline_signature_image_k4(2,1,[2,1,1]) # (4, 96)
+get_dim_and_degree_parametric_spline_signature_image_k4(2,2,[2,2]) # (4, 96)

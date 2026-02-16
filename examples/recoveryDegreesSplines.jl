@@ -1,6 +1,7 @@
 using SignatureTensors
 using Oscar
 
+# See arXiv:2602.13011
 
 function ourFilter(v,r)
   canonical(c) = min(c, reverse(c))
@@ -20,6 +21,8 @@ function ourTable(r::Int)
   return res
 end
 
+
+# Table 3 and 4 
 d = 2; 
 k = 4; 
 for r in (0:4)
@@ -38,3 +41,73 @@ for r in (0:4)
       println("r=",r,", m=", vm, ", dim=", dimI, ", deg=",degI)
   end
 end
+
+
+function polynomial_ring_sig_transform_geom_splines(_dim::Int,m::Vector{Int},r::Int)
+   n = sum(m) - (length(m)-1)*r
+   return  polynomial_ring(QQ, :a => (1:_dim,1:n), :rho => (1:(length(m)-1),1:r))
+end
+
+function nextBlock_geom_splines(rho,A, r::Int, mi)
+    nrows, ncols = size(A)
+    R = parent(rho[1,1])
+    vecs = zeros(R, ncols, r)
+    for i in 1:r
+        for j in 1:ncols
+            vecs[j, i] = binomial(j, i)*rho[mi,i]
+        end
+    end
+    return matrix(R,A) * matrix(R,vecs)
+end
+
+function coreSplineTrafo_geom_splines(rho,m::Vector{Int}, r::Int)
+    R = parent(rho[1,1])
+    total_dim = sum(m)
+    if r == 0
+        return identity_matrix(R,total_dim)
+    end
+    zz = 1
+    crb = identity_matrix(R,m[1])
+    B = crb
+    while zz < length(m)
+        nr = size(B, 2)
+        start_col = nr - m[zz] + 1
+        end_col   = nr
+        subB = B[:, start_col:end_col]
+        nb = nextBlock_geom_splines(rho,subB, r, zz)
+        idpart = identity_matrix(R,m[zz+1] - r)
+        B = block_diagonal_matrix([hcat(B, nb), idpart])
+        zz += 1
+    end
+    return B
+end
+
+
+function get_recovery_degree_geometric_spline(d::Int, k::Int, r::Int, m)
+  R, a, rho = polynomial_ring_sig_transform_geom_splines(d,m,r)
+  T = TruncatedTensorAlgebra(R,sum(m),k)
+  C = sig(T,:pwmon,composition=m);
+  B = Array(coreSplineTrafo_geom_splines(rho,m,r));
+  n = size(B)[1]
+  A = generic_transform(d,n);
+  v =  vec(vcat(vec(a),vec(QQ.(rand(-10:10, length(m)-1, r)))))
+  eval_rho = f -> evaluate(f,v)
+  B_eval = eval_rho.(B)
+  I = ideal(R,vec(A*(B_eval*C)-a*(B*C)));
+  LI = leading_monomial.(groebner_basis_f4(I));
+  @assert dim(ideal(R,LI)) == 0;
+  return degree(ideal(R,LI));
+end
+
+# Table 5 
+get_recovery_degree_geometric_spline(2,4,1,[2,2,1]) # 32
+get_recovery_degree_geometric_spline(2,4,1,[2,1,2]) # 32
+get_recovery_degree_geometric_spline(2,4,1,[1,3,1]) # 96
+get_recovery_degree_geometric_spline(2,4,2,[3,2]) # 116
+
+# Table 6
+get_recovery_degree_geometric_spline(3,3,1,[3,2,1]) # 144
+get_recovery_degree_geometric_spline(3,3,1,[3,1,2]) # 84 
+get_recovery_degree_geometric_spline(3,3,1,[2,2,2]) # 90
+get_recovery_degree_geometric_spline(3,3,2,[4,2]) # 312
+get_recovery_degree_geometric_spline(3,3,2,[3,3]) # 168

@@ -78,6 +78,17 @@
             @test is_one(I) != true
         end
     end
+
+    @testset " Proposition 6.5 in AS25" begin 
+    # ---------------------------------------------------------
+        m = 10; d = 3; m1 = 5; m2 = 4; k = 3;
+        R, a = polynomial_ring(QQ, :a=>(1:d, 1:m));
+        T = TruncatedTensorAlgebra(R, m, k);
+        Sis = [sig(T,:segment,coef=one_hot(i,m,R)) for i in 1:m];
+        S1 = prod([Sis[i] for i in 1:m1]);
+        S2 = prod([Sis[i] for i in m1+1:m1+m2]);
+        @test a*bary([S1, S2]) == bary([a*S1, a*S2])
+    end 
 end
 
 

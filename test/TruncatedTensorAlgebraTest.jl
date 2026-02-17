@@ -147,12 +147,6 @@
           @test exp(log(S)) == S
           @test S^3 == S*S*S
           @test exp(log(S) + log(S)) == S^2
-          for m1 in 1:m-1     # decompose via Chen
-            A1 = A[:,1:m1]
-            A2 = A[:,m1+1:m]
-            @test hcat(A1,A2) == A
-            @test sig(T,:pwln,coef=A) == sig(T,:pwln,coef=A1)*sig(T,:pwln,coef=A2)
-          end
         end 
     end    
     

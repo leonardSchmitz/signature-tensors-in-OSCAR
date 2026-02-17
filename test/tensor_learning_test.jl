@@ -1,6 +1,6 @@
 @testset "tensor learning for :iis" begin
 
-    @testset "Pwlin recovery with 1 solution d=m=4 and k=3" begin
+    @testset "Pwln recovery with 1 solution d=m=4 and k=3" begin
         d =4; k = 3;
         R, a = polynomial_ring(QQ, :a => (1:d,1:d));
         C= sig(TruncatedTensorAlgebra(R,d,k),:axis); 

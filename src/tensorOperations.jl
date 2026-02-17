@@ -12,7 +12,8 @@ export
   matrix_tensor_multiply_3!, 
   matrix_tensor_multiply_3, 
   matrix_tensor_congruence_3!, 
-  matrix_tensor_congruence_3
+  matrix_tensor_congruence_3, 
+  one_hot
 
 
 #TODO: remove ≤ 
@@ -281,3 +282,8 @@ function matrix_tensor_congruence_3(matrix::Array, tensor::Array)
     return res
 end
 
+function one_hot(_i::Int, _n::Int, _R)
+    res = fill(zero(_R), _n)
+    res[_i] = one(_R)
+    return res
+end

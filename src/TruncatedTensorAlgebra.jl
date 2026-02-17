@@ -400,6 +400,8 @@ function sig(T::TruncatedTensorAlgebra{R},
     if seq_type==:iis
         if path_type==:point && coef==[] && algorithm == :default
             return one(T)
+        elseif path_type == :segment
+            return sig_segment_TA(T,Array(coef))
         elseif path_type==:axis && coef==[] && (algorithm == :default || algorithm ==:AFS19)
             return sigAxis_TA_ClosedForm(T) 
         elseif path_type==:axis && coef==[] && algorithm == :Chen 
@@ -488,13 +490,6 @@ end
 function _Cmono_seqTA(_trunc_level::Int, _order::Int, R0)
     return [_CmonoTA(_k, _order, R0) for _k in 0:_trunc_level]
 end
-
-function _one_hot_TA(_i::Int, _n::Int, _R)
-    res = fill(zero(_R), _n)
-    res[_i] = one(_R)
-    return res
-end
-
 
 function sig_mono_TA(T::TruncatedTensorAlgebra{R}) where R
     if T.sequence_type != :iis
@@ -1082,7 +1077,7 @@ function sig_segment_standard_direction_TA(T::TruncatedTensorAlgebra{R}, _i::Int
     d = base_dimension(T)
     A = base_algebra(T)
     # vector one-hot in the direction _i
-    v = _one_hot_TA(_i, d, A)
+    v = one_hot(_i, d, A)
     return sig_segment_TA(T, v)
 end
 

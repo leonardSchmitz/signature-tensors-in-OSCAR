@@ -430,9 +430,15 @@ function sig(T::TruncatedTensorAlgebra{R},
             return sigAxis_p2id_TA_ClosedForm(T,m,n)
         elseif path_type==:axis && coef==[] && (algorithm == :Chen)
             return sigAxis_p2id_Chen(T,m,n)
+        elseif path_type==:poly && (algorithm == :default)
+            return sig2parPoly(T,coef)
+        elseif path_type==:pwln && algorithm == :congruence
+            return sig_Axis_pwln_p2id(T,coef)
+        else 
+            throw(ArgumentError("sig not supported for given arguments"))    
+        end
     elseif seq_type==:p2
         throw(ArgumentError("sig not supported for given arguments"))
-    end
     else 
         throw(ArgumentError("sig not supported for given arguments"))
     end
@@ -663,8 +669,12 @@ end
 function Base.:(==)(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
     if parent(a).sequence_type == :iis && parent(b).sequence_type == :iis
         return parent(a) == parent(b) && tensor_sequence(a) == tensor_sequence(b)
+    elseif parent(a).sequence_type == :p2id && parent(b).sequence_type == :p2id
+        return parent(a) == parent(b) && tensor_sequence(a) == tensor_sequence(b)
+    elseif parent(a).sequence_type == :p2 && parent(b).sequence_type == :p2
+        return parent(a) == parent(b) && tensor_sequence(a) == tensor_sequence(b)
     else
-        throw(ArgumentError("== only defined for sequence_type == :iis"))
+        throw(ArgumentError("== only defined for sequence_type == :iis, :p2id, or :p2"))
     end
 end
 
@@ -688,8 +698,16 @@ function Base.:+(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
         A = parent(a)
         res_seq = tensor_sequence(a) + tensor_sequence(b)
         return TruncatedTensorAlgebraElem(A, res_seq)
+    elseif parent(a).sequence_type == :p2id && parent(b).sequence_type == :p2id
+        A = parent(a)
+        res_seq = tensor_sequence(a) + tensor_sequence(b)
+        return TruncatedTensorAlgebraElem(A, res_seq)
+    elseif parent(a).sequence_type == :p2 && parent(b).sequence_type == :p2
+        A = parent(a)
+        res_seq = tensor_sequence(a) + tensor_sequence(b)
+        return TruncatedTensorAlgebraElem(A, res_seq)
     else
-        throw(ArgumentError("+ only defined for sequence_type == :iis"))
+        throw(ArgumentError("+ only defined for sequence_type == :iis, :p2id, or :p2"))
     end
 end
 
@@ -709,8 +727,16 @@ function Base.:-(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
         A = parent(a)
         res_seq = tensor_sequence(a) - tensor_sequence(b)
         return TruncatedTensorAlgebraElem(A, res_seq)
+    elseif parent(a).sequence_type == :p2id && parent(b).sequence_type == :p2id
+        A = parent(a)
+        res_seq = tensor_sequence(a) - tensor_sequence(b)
+        return TruncatedTensorAlgebraElem(A, res_seq)
+    elseif parent(a).sequence_type == :p2 && parent(b).sequence_type == :p2
+        A = parent(a)
+        res_seq = tensor_sequence(a) - tensor_sequence(b)
+        return TruncatedTensorAlgebraElem(A, res_seq)
     else
-        throw(ArgumentError("- only defined for sequence_type == :iis"))
+        throw(ArgumentError("- only defined for sequence_type == :iis, :p2id, or :p2"))
     end
 end
 
@@ -741,8 +767,15 @@ function Base.:*(a::TruncatedTensorAlgebraElem{R,E},
       F, s = free_trunc_sig_alg_multiv(k, 2)
       chen = prod([free_sig_from_sample(i, F) for i in 1:2])
       return evaluate(chen, [a, b])
+    elseif parent(a).sequence_type == :p2id && parent(b).sequence_type == :p2id
+      A = parent(a)
+      k = truncation_level(A)
+
+      F, s = free_trunc_sig_alg_multiv(k, 2)
+      chen = prod([free_sig_from_sample(i, F) for i in 1:2])
+      return evaluate(chen, [a, b])
     else
-        throw(ArgumentError("* only defined for sequence_type == :iis"))
+        throw(ArgumentError("* only defined for sequence_type == :iis, :p2id, or :p2"))
     end
 end
 
@@ -1094,13 +1127,14 @@ end
 
 
 #TODO Gabriel , incorperate tensor concatenation 
+# DONE
 function concatenate_tensors_TA(t1::TruncatedTensorAlgebraElem, t2::TruncatedTensorAlgebraElem)
     # Check same parent
     @assert parent(t1) === parent(t2) "Parents must match"
 
     # Concatenate each tensor level-wise
     elem1 = t1.elem
-    elem2 = t2.elem
+    elem2 = t2.elem 
 
     @assert length(elem1) == length(elem2) "Truncation levels must match"
 
@@ -1110,10 +1144,7 @@ function concatenate_tensors_TA(t1::TruncatedTensorAlgebraElem, t2::TruncatedTen
         tensor1 = elem1[k]
         tensor2 = elem2[k]
 
-        reshaped_tensor1 = reshape(tensor1, size(tensor1)..., ones(Int, ndims(tensor2))...)
-        reshaped_tensor2 = reshape(tensor2, ones(Int, ndims(tensor1))..., size(tensor2)...)
-
-        new_elem[k] = reshaped_tensor1 .* reshaped_tensor2
+        new_elem[k] = concatenate_tensors(tensor1, tensor2)
     end
 
     return TruncatedTensorAlgebraElem(parent(t1), new_elem)
@@ -1837,19 +1868,138 @@ via matrix-tensor congruence. Returns a **new** truncated tensor algebra with up
 - `T` : input truncated tensor algebra
 - `a` : coefficient matrix (d_new × d)
 """
-function sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
-    d_new, d = size(a)
-    d == T.base_dimension || error("size(a,2) must match T.ambient_dimension")
 
-    R = T.base_algebra
-    k = T.truncation_level
-    seq_type = T.sequence_type
+
+function tensor_to_matrix(A::AbstractArray{T,3}) where {T}
+    d, m, n = size(A)
+    M = zeros(T, d, m*n)
+
+    for k in 1:d, i in 1:m, j in 1:n
+        col = (i - 1) * n + j
+        M[k, col] = A[k, i, j]
+    end
+
+    return M
+end
+
+
+#function sig2parPoly(T::TruncatedTensorAlgebra, a::AbstractMatrix)
+#    d_new, d = size(a)
+#    d == T.base_dimension || error("size(a,2) must match T.ambient_dimension")
+
+#   R = T.base_algebra
+#    k = T.truncation_level
+#    seq_type = T.sequence_type
 
     # Step 1: Build moment membrane tensor in same algebra as T
-    T_moment = momentMembraneTensor(T)   # <-- returns TruncatedTensorAlgebra with same algebra
+#    T_moment = momentMembraneTensor(T)   # <-- returns TruncatedTensorAlgebra with same algebra
 
     # Step 2: Apply matrix-tensor congruence using a
-    T_new = applyMatrixToTTA(a, T_moment)
+#    T_new = applyMatrixToTTA(a, T_moment)
 
-    return T_new
+#    return T_new
+#end
+
+
+"""
+    sig2parPoly(T::TruncatedTensorAlgebra, A::AbstractArray{S,3})
+
+Apply tensor–matrix congruence to the moment membrane associated with T,
+using a rank-3 tensor A ∈ ℝ^{d×m×n} interpreted as a linear operator
+
+    ℝ^m ⊗ ℝ^n → ℝ^d.
+
+Returns:
+- T_new :: TruncatedTensorAlgebra
+- (m, n) :: dimensions of the moment membrane
+"""
+function sig2parPoly(
+    T::TruncatedTensorAlgebra,
+    A::AbstractArray{S,3}
+) where {S}
+
+    # --------------------------------------------------
+    # Extract tensor dimensions
+    # --------------------------------------------------
+    d, m, n = size(A)
+
+    # Geometric consistency check:
+    # the moment membrane lives in ℝ^{m·n}
+    m * n == T.base_dimension ||
+        error("m * n must equal T.base_dimension")
+
+    # --------------------------------------------------
+    # Step 1: build the moment membrane (p2id version)
+    # --------------------------------------------------
+    T_moment = moment_membrane_p2id(T, m, n)
+
+    # --------------------------------------------------
+    # Step 2: build the induced linear map Ã : ℝ^{mn} → ℝ^d
+    # from the tensor A[k,i,j]
+    #
+    # Canonical vectorization:
+    #   (i,j) ↦ (i-1)*n + j
+    # --------------------------------------------------
+    A_tilde = zeros(S, d, m * n)
+
+    @inbounds for kidx in 1:d
+        for i in 1:m
+            for j in 1:n
+                col = (i - 1) * n + j
+                A_tilde[kidx, col] = A[kidx, i, j]
+            end
+        end
+    end
+
+    # --------------------------------------------------
+    # Step 3: apply tensor–matrix congruence to the TTA
+    # --------------------------------------------------
+    T_new = applyMatrixToTTA(A_tilde, T_moment)
+
+    return T_new, m, n
+end
+
+
+function sig_Axis_pwln_p2id(
+    T::TruncatedTensorAlgebra,
+    A::AbstractArray{S,3}
+) where {S}
+
+    # --------------------------------------------------
+    # Extract tensor dimensions
+    # --------------------------------------------------
+    d, m, n = size(A)
+
+    # Consistency check:
+    m * n == T.base_dimension ||
+        error("m * n must equal T.base_dimension")
+
+    # --------------------------------------------------
+    # Step 1: build axis moment membrane signature
+    # (closed-form, p2id sequence type)
+    # --------------------------------------------------
+    T_axis = sigAxis_p2id_TA_ClosedForm(T, m, n)
+
+    # --------------------------------------------------
+    # Step 2: build the induced linear map Ã : ℝ^{mn} → ℝ^d
+    #
+    # Canonical vectorization: (i,j) ↦ (i-1)*n + j
+    # --------------------------------------------------
+    A_tilde = zeros(S, d, m * n)
+
+    @inbounds for kidx in 1:d
+        for i in 1:m
+            for j in 1:n
+                col = (i - 1) * n + j
+                A_tilde[kidx, col] = A[kidx, i, j]
+            end
+        end
+    end
+
+    # --------------------------------------------------
+    # Step 3: apply tensor–matrix congruence to the signature
+    # --------------------------------------------------
+    T_new = applyMatrixToTTA(A_tilde, T_axis)
+
+    return T_new, m, n
 end

@@ -1,7 +1,7 @@
 using SignatureTensors
 using Oscar
 
-# See arXiv:2602.13011
+# See ALS26 : https://doi.org/10.48550/arXiv.2602.13011
 
 function ourFilter(v,r)
   canonical(c) = min(c, reverse(c))
@@ -22,7 +22,7 @@ function ourTable(r::Int)
 end
 
 
-# Table 3 and 4 
+# Table 3 and 4 in ALS26 
 d = 2; 
 k = 4; 
 for r in (0:4)
@@ -99,13 +99,13 @@ function get_recovery_degree_geometric_spline(d::Int, k::Int, r::Int, m)
   return degree(ideal(R,LI));
 end
 
-# Table 5 
+# Table 5 in ALS26
 get_recovery_degree_geometric_spline(2,4,1,[2,2,1]) # 32
 get_recovery_degree_geometric_spline(2,4,1,[2,1,2]) # 32
 get_recovery_degree_geometric_spline(2,4,1,[1,3,1]) # 96
 get_recovery_degree_geometric_spline(2,4,2,[3,2]) # 116
 
-# Table 6
+# Table 6 in ALS26
 get_recovery_degree_geometric_spline(3,3,1,[3,2,1]) # 144
 get_recovery_degree_geometric_spline(3,3,1,[3,1,2]) # 84 
 get_recovery_degree_geometric_spline(3,3,1,[2,2,2]) # 90
@@ -134,7 +134,7 @@ function get_dim_and_degree_parametric_spline_signature_image_k4(d::Int,r::Int,m
 end
 
 # dimension of the image 
-# table 1
+# table 1 in ALS26
 get_dim_and_degree_parametric_spline_signature_image_k4(2,0,[1,1,1]) # (6, 276) 
 get_dim_and_degree_parametric_spline_signature_image_k4(2,1,[1,1,1]) # (2, 16)
 get_dim_and_degree_parametric_spline_signature_image_k4(2,1,[2,1]) # (4, 96)

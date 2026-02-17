@@ -1,4 +1,5 @@
 @testset "Barycentric Tests" begin
+    # CDMSSU24 : https://epubs.siam.org/doi/abs/10.1137/23M159024X
     # AS25 : https://doi.org/10.48550/arXiv.2509.07815
     d = 4        # path dimension
     k = 5        # truncation level
@@ -56,6 +57,28 @@
         @test bary(sX) == bary(sX,algorithm=:AS25trunc2)
     end
 
+    @testset "Theorem 7.2 in AS25" begin
+        for alpha in [[2,2],[3,1,2],[2,2,1,2],[2,1,1,2], 
+                      [1,2,1,2],[1,1,1],[1,1,1,3],[1,1,1,1,1]]
+            N = length(alpha); sum_alpha = sum(alpha);
+            d = sum_alpha;
+            odds = length([ai for ai in alpha if isodd(ai)]);
+            if odds == sum_alpha
+              Bd2 = sum_alpha;
+            else 
+              Bd2 = sum_alpha - odds + 1;
+            end 
+            R, a = polynomial_ring(QQ, :a => (1:d,1:Bd2));                          # d = 2, m = Bd2
+            TTSd = TruncatedTensorAlgebra(R,d,k);
+            A = [R.(rand(0:100, d, alpha[i])) for i in (1:N)];
+            sX = [sig(TTSd ,:pwln,coef=A[i]) for i in (1:N)];
+            sY = bary(sX);
+            s_pwln = sig(TTSd,:pwln,coef=a);          
+            I = ideal(R,vec(s_pwln - sY));
+            @test is_one(I) != true
+        end
+    end
 end
+
 
 

@@ -87,6 +87,7 @@ function matrix_tensor_congruence_TA(matrix::AbstractMatrix, tensor::AbstractArr
     return res
 end
 
+
 function matrix_tensor_multiply_TA(matrix::AbstractMatrix, tensor::AbstractArray, index::Int)
     @assert 1 <= index <= ndims(tensor) "Index must be a valid axis of the tensor."
     @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"

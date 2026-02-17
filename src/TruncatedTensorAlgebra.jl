@@ -720,14 +720,30 @@ Chen product (truncated tensor algebra multiplication) of two signatures.
 
 function Base.:*(a::TruncatedTensorAlgebraElem{R,E}, 
                  b::TruncatedTensorAlgebraElem{R,E}) where {R,E}
-    A = parent(a)
-    k = truncation_level(A)
+    if parent(a).sequence_type == :iis && parent(b).sequence_type == :iis
+      A = parent(a)
+      k = truncation_level(A)
 
-    F, s = free_trunc_sig_alg_multiv(k, 2)
-    chen = prod([free_sig_from_sample(i, F) for i in 1:2])
-
-    return evaluate(chen, [a, b])
+      F, s = free_trunc_sig_alg_multiv(k, 2)
+      chen = prod([free_sig_from_sample(i, F) for i in 1:2])
+      return evaluate(chen, [a, b])
+    else
+        throw(ArgumentError("* only defined for sequence_type == :iis"))
+    end
 end
+
+
+#function Base.:*(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
+#    if parent(a).sequence_type == :iis && parent(b).sequence_type == :iis
+#        A = parent(a)
+#        k = truncation_level(A)
+#        F, s = free_trunc_sig_alg_multiv(k, 2)
+#        chen = prod([free_sig_from_sample(i, F) for i in 1:2])
+#        return evaluate(chen, [a, b])
+#    else
+#        throw(ArgumentError("* only defined for sequence_type == :iis"))
+#    end
+#end
 
 """
     Base.:*(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
@@ -741,13 +757,11 @@ Matrix-tensor congruence multiplication.
 
 function Base.:*(matrix::AbstractMatrix, x::TruncatedTensorAlgebraElem)
     T = parent(x)
-
     if T.sequence_type == :iis
-            return matrix_tensorAlg_congruence_TA(matrix, x)
+        return matrix_tensorAlg_congruence_TA(matrix, x)
     else
-                throw(ArgumentError("matrix * TruncatedTensorAlgebraElem ony defined for sequence_type = :iis"))
+        throw(ArgumentError("matrix * TruncatedTensorAlgebraElem ony defined for sequence_type = :iis"))
     end
-
 end
 
 
@@ -761,7 +775,6 @@ Scalar multiplication of a truncated signature.
 - Supports numbers (`Number`) or algebra elements (`FieldElem` / `R`).
 - Returns a new `TruncatedTensorAlgebraElem`.
 """
-
 
 function Base.:*(a::FieldElem, b::TruncatedTensorAlgebraElem)
     if parent(b).sequence_type == :iis
@@ -778,7 +791,6 @@ function Base.:*(a::FieldElem, b::TruncatedTensorAlgebraElem)
     end
 end
 
-#TODO is this redundant if R == QQ? 
 function Base.:*(a::R, b::TruncatedTensorAlgebraElem{R,E}) where {R,E}
     if parent(b).sequence_type == :iis
        A = parent(b)
@@ -793,19 +805,6 @@ function Base.:*(a::R, b::TruncatedTensorAlgebraElem{R,E}) where {R,E}
         throw(ArgumentError("scalar * only defined for sequence_type == :iis"))
     end
 end
-
-function Base.:*(a::TruncatedTensorAlgebraElem, b::TruncatedTensorAlgebraElem)
-    if parent(a).sequence_type == :iis && parent(b).sequence_type == :iis
-        A = parent(a)
-        k = truncation_level(A)
-        F, s = free_trunc_sig_alg_multiv(k, 2)
-        chen = prod([free_sig_from_sample(i, F) for i in 1:2])
-        return evaluate(chen, [a, b])
-    else
-        throw(ArgumentError("* only defined for sequence_type == :iis"))
-    end
-end
-
 
 # =========================
 # Inverse and Powers
@@ -920,13 +919,24 @@ end
 ### Barycenter 
 
 
-function bary(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
-    return bary_TA(bs) #TODO: more oprions 
+function bary(bs::Vector{TruncatedTensorAlgebraElem{R, E}}; 
+              algorithm::Symbol = :default) where {R, E}
+    k = truncation_level(parent(bs[1]))
+    if algorithm == :default
+        return bary_TA(bs) 
+    elseif algorithm == :geodesic && length(bs) == 2
+        return bs[1]*exp(QQ(1,2)*log(inv(bs[1])*bs[2])) 
+    elseif algorithm == :CDMSSU24trunc2 && k==2
+        return bary_2nd_trunc_TA(bs)
+    elseif algorithm == :AS25trunc2 && k==2
+        return bary_2nd_trunc_closedform_TA(bs) 
+    else 
+        throw(ArgumentError("sig not supported for given arguments")) 
+    end 
 end 
 
-function bary_2samples_TA(a::TruncatedTensorAlgebraElem, 
-                          b::TruncatedTensorAlgebraElem)
-  return a*exp(QQ(1,2)*log(inv(a)*b))
+function bary_2samples_TA(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
+  return bs[1]*exp(QQ(1,2)*log(inv(bs[1])*bs[2])) 
 end
 
 function bary_TA(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
@@ -966,18 +976,18 @@ function bary_all_but_last_samples_fixed_inverse(bs::Vector{TruncatedTensorAlgeb
   return res 
 end
 
-function bary_2nd_trunc_TA(bs::Vector{TruncTensorSeqElem})
+function bary_2nd_trunc_TA(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
   N = length(bs)
   return exp(QQ(1,N)*sum(log.(bs))) 
 end
 
-function bary_2nd_trunc_closedform_TA(bs::Vector{TruncTensorSeqElem})
+function bary_2nd_trunc_closedform_TA(bs::Vector{TruncatedTensorAlgebraElem{R, E}}) where {R, E}
   TTSm = parent(bs[1])
   N = length(bs)
   ls = tensor_sequence.(bs)
   vec = QQ(1,N).*sum(ls[i][2] for i in (1:N))
   mat = QQ(1,N).*sum(ls[i][3] for i in (1:N)) - QQ(1,2*N).*sum(ls[i][2]*transpose(ls[i][2]) for i in (1:N)) + QQ(1,2*N^2).*sum(ls[i1][2]*transpose(ls[i2][2]) for i1 in (1:N) for i2 in (1:N))
-  return trunc_tensor_seq_elem(TTSm,[ls[1][1],vec,mat])
+  return TruncatedTensorAlgebraElem(TTSm,[ls[1][1],vec,mat])
 end
 
 ### Ideal constuctors

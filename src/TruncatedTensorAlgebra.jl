@@ -392,29 +392,48 @@ inside the truncated tensor algebra `T`.
 sig
 function sig(T::TruncatedTensorAlgebra{R},
              path_type::Symbol; 
-             coef=[], 
+             coef=[], m=0, n=0, 
              composition::Vector{Int}=Int[],
              regularity::Int=0,
              algorithm::Symbol=:default) where R
-    if path_type==:point && coef==[] && algorithm == :default
-        return one(T)
-    elseif path_type==:axis && coef==[] && (algorithm == :default || algorithm ==:AFS19)
-        return sigAxis_TA_ClosedForm(T) 
-    elseif path_type==:axis && coef==[] && algorithm == :Chen 
-        return sig_axis_TA(T) 
-    elseif path_type==:mono && coef==[] && algorithm == :default
-        return sig_mono_TA(T) 
-    elseif path_type==:pwln && algorithm == :congruence
-        return sig_pwln_TA_Congruence(T,Array(coef))
-    elseif path_type==:pwln && (algorithm == :Chen || algorithm == :default)
-        return sig_pwln_TA_chen(T,Array(coef))
-    elseif (path_type == :pwmon && algorithm == :Chen)
-        return sig_pw_mono_chen(T,composition,regularity)
-    elseif path_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
-        return sig_pw_mono_ALS26(T,composition,regularity)
+    seq_type = sequence_type(T)
+    if seq_type==:iis
+        if path_type==:point && coef==[] && algorithm == :default
+            return one(T)
+        elseif path_type==:axis && coef==[] && (algorithm == :default || algorithm ==:AFS19)
+            return sigAxis_TA_ClosedForm(T) 
+        elseif path_type==:axis && coef==[] && algorithm == :Chen 
+            return sig_axis_TA(T) 
+        elseif path_type==:mono && coef==[] && algorithm == :default
+            return sig_mono_TA(T) 
+        elseif path_type==:pwln && algorithm == :congruence
+            return sig_pwln_TA_Congruence(T,Array(coef))
+        elseif path_type==:pwln && (algorithm == :Chen || algorithm == :default)
+            return sig_pwln_TA_chen(T,Array(coef))
+        elseif (path_type == :pwmon && algorithm == :Chen)
+            return sig_pw_mono_chen(T,composition,regularity)
+        elseif path_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
+            return sig_pw_mono_ALS26(T,composition,regularity)
+        elseif path_type == :poly && (algorithm == :default)
+            return sig_poly_TA(T,coef)
+        else 
+           throw(ArgumentError("sig not supported for given arguments")) 
+        end 
+    elseif seq_type==:p2id
+        if path_type==:point && coef==[] && algorithm == :default
+            return one(T)
+        elseif path_type==:mono && coef==[] && algorithm == :default
+            return moment_membrane_p2id(T, m, n)
+        elseif path_type==:axis && coef==[] && (algorithm == :default || algorithm == :AFS19)
+            return sigAxis_p2id_TA_ClosedForm(T,m,n)
+        elseif path_type==:axis && coef==[] && (algorithm == :Chen)
+            return sigAxis_p2id_Chen(T,m,n)
+    elseif seq_type==:p2
+        throw(ArgumentError("sig not supported for given arguments"))
+    end
     else 
-        throw(ArgumentError("sig not supported for given arguments")) 
-    end 
+        throw(ArgumentError("sig not supported for given arguments"))
+    end
 end
 
 
@@ -1736,15 +1755,15 @@ end
 # ==============================================================
 # Optional dispatch by seq_type
 # ==============================================================
-function moment_membrane(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
-    if TTA.sequence_type == :p2id
-        return moment_membrane_p2id(TTA, m, n)
-    elseif TTA.sequence_type == :p2
-        return moment_membrane_p2(TTA, m, n)
-    else
-        error("sequence_type must be :p2id or :p2")
-    end
-end
+#function moment_membrane(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
+#    if TTA.sequence_type == :p2id
+#        return moment_membrane_p2id(TTA, m, n)
+#    elseif TTA.sequence_type == :p2
+#        return moment_membrane_p2(TTA, m, n)
+#    else
+#        error("sequence_type must be :p2id or :p2")
+#    end
+#end
 
 
 

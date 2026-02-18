@@ -427,7 +427,7 @@ function sig(T::TruncatedTensorAlgebra{R},
         elseif path_type==:mono && coef==[] && algorithm == :default
             return moment_membrane_p2id(T, m, n)
         elseif path_type==:axis && coef==[] && (algorithm == :default || algorithm == :AFS19)
-            return sigAxis_p2id_TA_ClosedForm(T,m,n)
+            return sigAxis_p2id_ClosedForm(T,m,n)
         elseif path_type==:axis && coef==[] && (algorithm == :Chen)
             return sigAxis_p2id_Chen(T,m,n)
         elseif path_type==:poly && (algorithm == :default)
@@ -651,7 +651,7 @@ function Base.getindex(x::TruncatedTensorAlgebraElem, w...)
         if k==1
             temp=x.elem[k+1]
         else
-            temp=x.elem[k]
+            temp=x.elem[k+1]
         end
     else 
         error("seq must be one of :iis, :p2id, :p2")
@@ -1043,7 +1043,7 @@ end
 function ideal_of_lyndon_entries(x::TruncatedTensorAlgebraElem)
   A = parent(x)
   R = base_algebra(A)
-  d = ambient_dimension(A)
+  d = base_dimension(A)
   k = truncation_level(A)
   lynd = generate_lyndon_words(k, Vector((1:d)))
   #res = ideal(R,zero(R))
@@ -1403,7 +1403,7 @@ end
 # -------------------------------
 function sigAxis_p2id_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     k = truncation_level(T)
-    
+    d=base_dimension(T)
     if m * n != d
         error("m * n != d")
     end
@@ -1543,7 +1543,7 @@ end
 # -------------------------------
 function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
     k = truncation_level(T)
-    
+    d=base_dimension(T)
     if m * n != d
         error("m * n != d")
     end
@@ -1577,7 +1577,7 @@ function sigAxis_p2id_Chen(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
             tensor_j[idx] = σ_m[idx_m...] * σ_n[idx_n...]
         end
 
-        elem_out[j] = tensor_j
+        elem_out[j+1] = tensor_j
     end
 
     return TruncatedTensorAlgebraElem{R, eltype(sig_m.elem[2])}(T, elem_out)
@@ -1670,18 +1670,18 @@ Constructs the moment tensor of level `j` for dimension `d` over the ring `R`.
 Each multi-index entry is numerator / denominator * one(R), 
 with numerator = prod(indices) and denominator = prod(cumsum(indices)).
 """
-function moment_path_level(R::QQMPolyRing, d::Int, j::Int)
+function moment_path_level(T::TruncatedTensorAlgebra, d::Int, j::Int)
     dims = ntuple(_ -> d, j)
-    T = Array{QQMPolyRingElem}(undef, dims...)
+    T2 = Array{typeof(zero(base_algebra(T)))}(undef, dims...)
 
     for idx in Iterators.product(ntuple(_ -> 1:d, j)...)
         idx_vec = collect(idx)
         numerator = prod(idx_vec)
         denominator = prod(cumsum(idx_vec))
-        T[idx...] = QQ(numerator, denominator) * one(R)
+        T2[idx...] = QQ(numerator, denominator) * one(base_algebra(T))
     end
 
-    return T
+    return T2
 end
 
 # ==============================================================
@@ -1693,39 +1693,38 @@ end
 Compute the moment tensors for a TruncatedTensorAlgebra of sequence type `:p2id`.
 Returns a new TTA object with `elem[j]` filled for all levels up to `truncation_level`.
 """
-function moment_membrane_p2id(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
-    R = TTA.base_algebra
-    k = TTA.truncation_level
-    d = TTA.base_dimension
-
+function moment_membrane_p2id(TTA::TruncatedTensorAlgebra{R}, m::Int, n::Int) where R
+    k = truncation_level(TTA)
+    d = base_dimension(TTA)
+    
     if m * n != d
         error("m * n must equal the ambient dimension of TTA")
     end
 
-    TTA_out = TruncatedTensorAlgebra(
-        R, d, k, :p2id
-    )
-    TTA_out.elem = Vector{Any}(undef, k)
+    seq = Vector{Any}(undef, k)
 
     for j in 1:k
-        σ_m = moment_path_level(R, m, j)
-        σ_n = moment_path_level(R, n, j)
+        s_m = moment_path_level(TTA, m, j)
+        s_n = moment_path_level(TTA, n, j)
 
         dims = ntuple(_ -> m*n, j)
-        tensor_j = Array{QQMPolyRingElem}(undef, dims...)
+        tensor_j = Array{eltype(s_m)}(undef, dims...)  # element type from s_m
 
-        # Fill tensor with direct product of σ_m and σ_n
         for idx in Iterators.product(ntuple(_ -> 1:(m*n), j)...)
-            idx_m = [(div(i-1, n) % m) + 1 for i in idx]
-            idx_n = [(mod(i-1, n) + 1) for i in idx]
-            tensor_j[idx...] = σ_m[idx_m...] * σ_n[idx_n...]
+            idx_tuple = Tuple(idx)
+            idx_m = [(div(i-1, n) % m) + 1 for i in idx_tuple]
+            idx_n = [(mod(i-1, n) + 1) for i in idx_tuple]
+
+            tensor_j[idx_tuple...] = getindex(s_m, idx_m...) * getindex(s_n, idx_n...)
         end
 
-        TTA_out.elem[j] = tensor_j
+        seq[j] = tensor_j
     end
 
-    return TTA_out
+    E = eltype(seq[1])
+    return TruncatedTensorAlgebraElem{R, E}(TTA, seq)
 end
+
 
 # ==============================================================
 # Moment membrane for :p2
@@ -1737,9 +1736,9 @@ Compute the moment tensors for a TruncatedTensorAlgebra of sequence type `:p2`.
 Returns a new TTA object with `elem[j]` filled for all levels up to `truncation_level`.
 """
 function moment_membrane_p2(TTA::TruncatedTensorAlgebra, m::Int, n::Int)
-    R = TTA.base_algebra
-    k = TTA.truncation_level
-    d = TTA.ambient_dimension
+    R = base_algebra(TTA)
+    k = truncation_level(TTA)
+    d = base_dimension(TTA)
 
     if m * n != d
         error("m * n must equal the ambient dimension of TTA")
@@ -1805,12 +1804,11 @@ Returns a **new** TruncatedTensorAlgebra with updated ambient dimension `d_new`.
 """
 function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
     d_new, d = size(A)
-    d == X.base_dimension || error("size(A,2) must match ambient dimension")
+    d == base_dimension(X) || error("size(A,2) must match ambient dimension")
 
-    R = X.base_algebra
-    k = X.truncation_level
-    seq_type = X.sequence_type
-
+    R = base_algebra(X)
+    k = truncation_level(X)
+    seq_type = sequence_type(X)
     # Create new TTA with updated ambient dimension
     X_new = TruncatedTensorAlgebra(R, d_new, k, sequence_type=seq_type)
 
@@ -1925,7 +1923,7 @@ function sig2parPoly(
 
     # Geometric consistency check:
     # the moment membrane lives in ℝ^{m·n}
-    m * n == T.base_dimension ||
+    m * n == base_dimension(T) ||
         error("m * n must equal T.base_dimension")
 
     # --------------------------------------------------
@@ -1971,14 +1969,14 @@ function sig_Axis_pwln_p2id(
     d, m, n = size(A)
 
     # Consistency check:
-    m * n == T.base_dimension ||
+    m * n == base_dimension(T) ||
         error("m * n must equal T.base_dimension")
 
     # --------------------------------------------------
     # Step 1: build axis moment membrane signature
     # (closed-form, p2id sequence type)
     # --------------------------------------------------
-    T_axis = sigAxis_p2id_TA_ClosedForm(T, m, n)
+    T_axis = sigAxis_p2id_ClosedForm(T, m, n)
 
     # --------------------------------------------------
     # Step 2: build the induced linear map Ã : ℝ^{mn} → ℝ^d

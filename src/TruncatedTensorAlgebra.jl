@@ -434,6 +434,8 @@ function sig(T::TruncatedTensorAlgebra{R},
             return sig2parPoly(T,coef)
         elseif path_type==:pwln && algorithm == :congruence
             return sig_Axis_pwln_p2id(T,coef)
+        elseif path_type==:pwbln && (algorithm == :default || algorithm == :congruence)
+            return sig_pwbln_p2id_Congruence(T,coef,m,n)
         else 
             throw(ArgumentError("sig not supported for given arguments"))    
         end
@@ -1802,58 +1804,67 @@ by mode-product along all modes. Handles both `:p2id` and `:p2` signatures.
 - `X` : input truncated tensor algebra
 Returns a **new** TruncatedTensorAlgebra with updated ambient dimension `d_new`.
 """
-function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebra)
+function applyMatrixToTTA(A::AbstractMatrix, X::TruncatedTensorAlgebraElem)
     d_new, d = size(A)
-    d == base_dimension(X) || error("size(A,2) must match ambient dimension")
 
-    R = base_algebra(X)
-    k = truncation_level(X)
-    seq_type = sequence_type(X)
-    # Create new TTA with updated ambient dimension
-    X_new = TruncatedTensorAlgebra(R, d_new, k, sequence_type=seq_type)
+    P = parent(X)
+    d == base_dimension(P) ||
+        error("size(A,2) must match ambient dimension")
+
+    R        = base_algebra(P)
+    k        = truncation_level(P)
+    seq_type = sequence_type(P)
+
+    seq_old = tensor_sequence(X)
+
+    # Container for new tensors
+    resSeq = Vector{typeof(seq_old[1])}(undef, k)
 
     for j in 1:k
-        T = X.tensor_sequence[j]
-
-        # Level 0 (scalar one) remains the same
-        if T === one(R)
-            X_new.tensor_sequence[j] = T
-            continue
-        end
+        T = seq_old[j]
 
         if seq_type == :p2id
-            # For p2id, apply mode-product along all modes
+            S = T
             for mode in 1:j
-                T = mode_product(T, A, mode, R)
+                S = mode_product(S, A, mode, R)
             end
+            resSeq[j] = S
+
         elseif seq_type == :p2
-            # For p2, we must account for permutations
             perms = permutations_1_to_j(j)
-            T_perm = Array{typeof(one(R))}(undef, (ntuple(_ -> d_new, j)..., factorial(j)))
+
+            dims = ntuple(_ -> d_new, j)
+            Tperm = Array{eltype(T)}(undef, (dims..., factorial(j)))
 
             for (perm_idx, perm) in enumerate(perms)
-                T_temp = similar(T)
+                S = similar(T)
+
                 # permute indices
                 for idx in Iterators.product(ntuple(_ -> 1:size(T,1), j)...)
                     idx_perm = idx[perm]
-                    T_temp[idx...] = T[idx_perm...]
+                    S[idx...] = T[idx_perm...]
                 end
-                # apply mode-product along all modes
+
+                # apply A along all modes
                 for mode in 1:j
-                    T_temp = mode_product(T_temp, A, mode, R)
+                    S = mode_product(S, A, mode, R)
                 end
-                T_perm[:, :, :, perm_idx] = T_temp  # last axis stores permutations
+
+                Tperm[ntuple(_ -> :, j)..., perm_idx] = S
             end
-            T = T_perm
+
+            resSeq[j] = Tperm
         else
             error("sequence_type must be :p2 or :p2id")
         end
-
-        X_new.tensor_sequence[j] = T
     end
 
-    return X_new
+    # New parent with updated ambient dimension
+    Tnew = TruncatedTensorAlgebra(R, d_new, k, seq_type)
+
+    return TruncatedTensorAlgebraElem(Tnew, resSeq)
 end
+
 
 
 """
@@ -1958,19 +1969,17 @@ function sig2parPoly(
 end
 
 
-function sig_Axis_pwln_p2id(
+function sig_pwbln_p2id_Congruence(
     T::TruncatedTensorAlgebra,
-    A::AbstractArray{S,3}
+    A::AbstractMatrix{S},  
+    m::Int, n::Int         # dimension
 ) where {S}
 
     # --------------------------------------------------
-    # Extract tensor dimensions
+    # Consistency check
     # --------------------------------------------------
-    d, m, n = size(A)
-
-    # Consistency check:
-    m * n == base_dimension(T) ||
-        error("m * n must equal T.base_dimension")
+    size(A) == (m, n) || error("A must have size (m, n)")
+    m * n == base_dimension(T) || error("m * n must equal T.base_dimension")
 
     # --------------------------------------------------
     # Step 1: build axis moment membrane signature
@@ -1978,26 +1987,8 @@ function sig_Axis_pwln_p2id(
     # --------------------------------------------------
     T_axis = sigAxis_p2id_ClosedForm(T, m, n)
 
-    # --------------------------------------------------
-    # Step 2: build the induced linear map Ã : ℝ^{mn} → ℝ^d
-    #
-    # Canonical vectorization: (i,j) ↦ (i-1)*n + j
-    # --------------------------------------------------
-    A_tilde = zeros(S, d, m * n)
+    T_new = applyMatrixToTTA(A, T_axis)
 
-    @inbounds for kidx in 1:d
-        for i in 1:m
-            for j in 1:n
-                col = (i - 1) * n + j
-                A_tilde[kidx, col] = A[kidx, i, j]
-            end
-        end
-    end
-
-    # --------------------------------------------------
-    # Step 3: apply tensor–matrix congruence to the signature
-    # --------------------------------------------------
-    T_new = applyMatrixToTTA(A_tilde, T_axis)
-
-    return T_new, m, n
+    return T_new
 end
+

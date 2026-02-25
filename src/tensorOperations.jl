@@ -73,7 +73,7 @@ function concatenate_tensors_TA(t1::AbstractArray, t2::AbstractArray)
     reshaped_tensor2 = reshape(t2, ones(Int, ndims(t1))..., size(t2)...)
     return reshaped_tensor1 .* reshaped_tensor2
 end
-
+  
 
 function matrix_tensor_congruence_TA(matrix::AbstractMatrix, tensor::AbstractArray)
     k = ndims(tensor)

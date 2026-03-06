@@ -428,11 +428,7 @@ function sig(T::TruncatedTensorAlgebra{R},
         elseif path_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
             return sig_pw_mono_ALS26(T, composition, regularity)
         elseif path_type == :poly && algorithm == :default
-            if ndims(coef) == 2
-                return sig2parPoly_fromMatrix(T, coef, shape[1], shape[2])
-            else
-                return sig2parPoly(T, coef)
-            end
+            return sig_poly_TA(T,coef)
         else
             throw(ArgumentError("sig not supported for given arguments"))
         end

@@ -3,7 +3,8 @@ export
   _superscript_number, 
   polynomial_ring_sig_transform, 
   matrix_to_latex,
-  tensor_to_latex_folded 
+  tensor_to_latex_folded, 
+  latex_tabular_benchmark_two_algorithms
 
 
 function _index_number(i::Int)
@@ -94,4 +95,24 @@ function tensor_to_latex_folded(G::Array{T,3}; name="G", s=0) where T
     return "\\begin{array}{" * col_format * "}" *
            body *
            "\\end{array}"
+end
+
+function latex_tabular_benchmark_two_algorithms(A, B)
+    d = size(A,1)
+    labels = [2^i for i in 1:d]   # 2,4,8,16,...
+
+    # header row
+    header = " & " * join(labels, " & ") * " \\\\\\hline\n"
+
+    rows = String[]
+    for i in 1:d
+        entries = ["$(floor(Int,A[i,j])),$(floor(Int,B[i,j]))" for j in 1:d]
+        row = string(labels[i], " & ", join(entries, " & "), " \\\\\\hline")
+        push!(rows, row)
+    end
+
+    body = join(rows, "\n")
+
+    return "\\begin{tabular}{|" * repeat("c|", d+1) * "}\n\\hline\n" *
+           header * body * "\n\\end{tabular}"
 end

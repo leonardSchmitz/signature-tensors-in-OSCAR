@@ -427,8 +427,10 @@ function sig(T::TruncatedTensorAlgebra{R},
             return sig_pw_mono_chen(T, composition, regularity)
         elseif path_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
             return sig_pw_mono_ALS26(T, composition, regularity)
-        elseif path_type == :poly && algorithm == :default
+        elseif path_type == :poly && ( algorithm == :congruence || algorithm == :default )
             return sig_poly_TA(T,coef)
+        elseif path_type == :poly && ( algorithm == :ARS26 )
+            return sig_poly_TA_ARS(T,coef)
         else
             throw(ArgumentError("sig not supported for given arguments"))
         end
@@ -1434,14 +1436,36 @@ function sig_axis_TA(T::TruncatedTensorAlgebra{R}) where R
 end
 
 
-function sig_poly_TA(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix) where R
+function sig_poly_TA(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix{E}) where {R,E}
+    d = base_dimension(T)
+    @assert size(coeffs,1) == d "Dimensions mismatch"
+    k=truncation_level(T)
+    A = base_algebra(T)
+    m=size(coeffs, 2)
+    Tm = TruncatedTensorAlgebra(A,m,k)
     # 1) Obtain moment path (sig_mono_TA)
-    mono_path = sig_mono_TA(T)
+    mono_path = sig_mono_TA(Tm)
 
     # 2) Apply coeficients with matricial congruence
     poly_path = matrix_tensorAlg_congruence_TA(coeffs, mono_path)
 
     return poly_path
+end
+
+function sig_poly_TA_ARS(T::TruncatedTensorAlgebra{R}, coeffs::AbstractMatrix{E}) where {R,E}
+    d = base_dimension(T)
+    @assert size(coeffs,1) == d "Dimensions mismatch"
+    k=truncation_level(T)
+    
+    R_tensor = base_algebra(T)
+    R_matrix = parent(coeffs[1,1])
+    Rnew = common_ring(R_tensor, R_matrix)
+    
+    Tnew = TruncatedTensorAlgebra(Rnew,d,k)   
+
+    poly_path=polynomial_path_iis_signature(coeffs, k; R=Rnew)
+
+    return TruncatedTensorAlgebraElem(Tnew, poly_path)
 end
 
 

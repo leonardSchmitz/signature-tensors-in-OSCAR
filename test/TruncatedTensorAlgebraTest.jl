@@ -13,7 +13,8 @@
     end
 
     function axis_core_3tensor_QQ(_d)
-        C = zeros(QQ,_d,_d,_d);
+        C=fill(zero(QQ), _d, _d, _d)
+        #C = zeros(QQ,_d,_d,_d);
         for al in (1:_d)
           for be in (1:_d)
             for ga in (1:_d)

@@ -1,7 +1,8 @@
 @testset "Truncated Tensor Algebra Tests :p2id" begin
 
     function axis_core_3tensor_QQ_p2id(_d)
-        C = zeros(QQ, _d, _d, _d)
+        #C = zeros(QQ, _d, _d, _d)
+        C = fill(zero(QQ), _d, _d, _d)
         for al in 1:_d, be in 1:_d, ga in 1:_d
             if al == be && be == ga
                 C[al, be, ga] = QQ(1,6)
@@ -22,7 +23,8 @@
        d_n = size(Caxis_n, 1)
        d   = d_m * d_n
 
-       M = zeros(QQ, d, d, d)
+       #M = zeros(QQ, d, d, d)
+       M = fill(zero(QQ), d, d, d)
 
        for i in 1:d_m, j in 1:d_m, k in 1:d_m
             for a in 1:d_n, b in 1:d_n, c in 1:d_n

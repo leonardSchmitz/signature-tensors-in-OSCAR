@@ -174,7 +174,8 @@ function _C0_TA(_k::Int, _order::Int, _alg, is_one::Bool)
     if _k == 0
         return fill(is_one ? one(_alg) : zero(_alg), ())
     else
-        return zeros(_alg, ntuple(_ -> _order, _k)...)
+        #return zeros(_alg, ntuple(_ -> _order, _k)...)
+       return fill(zero(_alg), ntuple(_ -> _order, _k)...) 
     end
 end
 
@@ -192,7 +193,8 @@ function tensor_sequence_constructor(A::TruncatedTensorAlgebra; is_one=true)
     # IIS
     if seq == :iis
         for n in 1:k
-            elems[n+1] = zeros(R, ntuple(_ -> d, n)...)
+            #elems[n+1] = zeros(R, ntuple(_ -> d, n)...)
+            elems[n+1] = fill(zero(R), ntuple(_ -> d, n)...)
         end
         return elems
     end
@@ -266,7 +268,9 @@ function Base.zero(T::TruncatedTensorAlgebra{R}) where R
     # Levels >= 1
     if seq == :iis
         for n in 1:k
-            elem[n + 1] = zeros(RA, ntuple(_ -> d, n)...)
+
+           # elem[n + 1] = zeros(RA, ntuple(_ -> d, n)...)
+            elem[n + 1] = fill(zero(RA), ntuple(_ -> d, n)...)
         end
 
     elseif seq == :p2id
@@ -276,7 +280,8 @@ function Base.zero(T::TruncatedTensorAlgebra{R}) where R
             else
                 dims = ntuple(_ -> d, n)
             end
-            elem[n + 1] = zeros(RA, dims...)
+            elem[n + 1] = fill(zero(RA), dims...)
+            #elem[n + 1] = zeros(RA, dims...)
         end
 
     elseif seq == :p2
@@ -286,7 +291,8 @@ function Base.zero(T::TruncatedTensorAlgebra{R}) where R
             else
                 dims = (ntuple(_ -> d, n)..., factorial(n))
             end
-            elem[n + 1] = zeros(RA, dims...)
+            elem[n + 1] = fill(zero(RA), dims...)
+            #elem[n + 1] = zeros(RA, dims...)
         end
 
     else
@@ -553,7 +559,9 @@ end
 
 function nextBlock(A, r::Int, mi)
     nrows, ncols = size(A)
-    vecs = zeros(QQ, ncols, r)
+    vecs_qqmatrix = zero_matrix(QQ, ncols, r)               
+    vecs = [vecs_qqmatrix[i,j] for i in 1:ncols, j in 1:r]  
+ #   vecs = zeros(QQ, ncols, r).  old
     for i in 1:r
         for j in 1:ncols
             vecs[j, i] = binomial(j, i)
@@ -619,7 +627,9 @@ end
 
 function _Cpwpoly(_k::Int, m::Vector{Int}, _R)
    M = sum(m)
-   res = zeros(_R, M*ones(Int,_k)...)
+
+   #res = zeros(_R, M*ones(Int,_k)...)
+   res = fill(zero(_R), M*ones(Int,_k)...)
    for idx in CartesianIndices(res)
        if _k ==0 
          res[idx] = one(_R)
@@ -1355,7 +1365,8 @@ function combinations_with_replacement(iter, k)
     end
 
     res = Vector{Vector{Int}}()
-    comb = zeros(Int, k)
+    comb = fill(0, k)
+#    comb = zeros(Int, k)
 
     function backtrack(pos, start)
         if pos > k
@@ -1395,7 +1406,8 @@ function sigAxis_TA_ClosedForm(T::TruncatedTensorAlgebra{R}) where R
     # Levels >= 2
     for j in 2:k
         dims = ntuple(_ -> d, j)
-        tensor_j = zeros(A, dims...)
+        #tensor_j = zeros(A, dims...)
+        tensor_j = fill(zero(A), dims...)
 
         for idx in combinations_with_replacement(1:d, j)
             counts = Dict{Int,Int}()
@@ -2110,7 +2122,8 @@ via matrix-tensor congruence. Returns a **new** truncated tensor algebra with up
 
 function tensor_to_matrix(A::AbstractArray{T,3}) where {T}
     d, m, n = size(A)
-    M = zeros(T, d, m*n)
+    #M = zeros(T, d, m*n)
+    M = fill(zero(T), d, m*n)
 
     for k in 1:d, i in 1:m, j in 1:n
         col = (i - 1) * n + j
@@ -2220,7 +2233,8 @@ function sig2parPoly(
     # Canonical vectorization
     #   (i,j) ↦ (i-1)*n + j
     # --------------------------------------------------
-    A_tilde = zeros(parent(A[1,1,1]), d, m * n)
+    A_tilde = fill(zero(parent(A[1,1,1])), d, m * n)
+#    A_tilde = zeros(parent(A[1,1,1]), d, m * n)
 
     @inbounds for kidx in 1:d
         for i in 1:m
@@ -2335,7 +2349,8 @@ end
 
 function weighted_shift(matrix::AbstractMatrix)
     m, n = size(matrix)
-    out = zeros(eltype(matrix), m, n)   # generic element type
+    #out = zeros(eltype(matrix), m, n)   # generic element type
+    out = fill(zero(eltype(matrix)), m, n)
     for i in 2:m
         for j in 2:n
 #            coef = 1 // (factorial(i-1) * factorial(j-1))
@@ -2355,7 +2370,8 @@ function sig_lott(matrixSeq::Vector{<:AbstractMatrix}, word::Vector{Int})
     T = eltype(matrixSeq[1])
     
     # Initialize the "sheet" with dimensions (m, n, k+1, k+1)
-    sheet = zeros(T, m, n, k+1, k+1)
+    #sheet = zeros(T, m, n, k+1, k+1)
+    sheet = fill(zero(T), m, n, k+1, k+1)
     for i in 1:m
         for j in 1:n
             sheet[i, j, 1, 1] += one(T)
@@ -2460,7 +2476,8 @@ function sigPiecewiseBilinear_TA(
     # ---------------------------------------------------------
     function compute_level(r)
         tensor_dims = ntuple(_ -> d, r)
-        Tlevel = zeros(E, tensor_dims...)
+        #Tlevel = zeros(E, tensor_dims...)
+        Tlevel = fill(zero(E), tensor_dims...)
 
         # Recursive enumeration of all words of length r
         function loop_word(current::Vector{Int}, level::Int)
@@ -2481,7 +2498,8 @@ function sigPiecewiseBilinear_TA(
             end
         end
 
-        loop_word(zeros(Int, r), 1)
+        #loop_word(zeros(Int, r), 1)
+        loop_word(fill(0, r), 1)
         return Tlevel
     end
 
@@ -2555,7 +2573,8 @@ function sigPiecewiseBilinear_fromTensor_TA(
     # ---------------------------------------------------------
     function compute_level(r)
         tensor_dims = ntuple(_ -> d, r)
-        Tlevel = zeros(E, tensor_dims...)
+        #Tlevel = zeros(E, tensor_dims...)
+        Tlevel = fill(zero(E), tensor_dims...)
 
         function loop_word(current::Vector{Int}, level::Int)
             if level > r
@@ -2573,7 +2592,8 @@ function sigPiecewiseBilinear_fromTensor_TA(
             end
         end
 
-        loop_word(zeros(Int, r), 1)
+        #loop_word(zeros(Int, r), 1)
+        loop_word(fill(0, r), 1)
         return Tlevel
     end
 

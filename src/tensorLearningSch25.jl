@@ -72,8 +72,10 @@ function linrel_mat_vec(G,s)
   d = size(G)[1]
   nreq = binomial(d-1,2)
   nrun = d - s
-  M = zeros(QQ,nreq,nrun)
-  B = zeros(QQ,nreq)
+  #M = zeros(QQ,nreq,nrun)
+  #B = zeros(QQ,nreq)
+  M = fill(zero(QQ), nreq, nrun)
+  B = fill(zero(QQ), nreq)
   i = 1
   for _a in (s+1:d)
     for _b in (_a+1:d)

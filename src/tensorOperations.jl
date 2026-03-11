@@ -73,7 +73,7 @@ function concatenate_tensors_TA(t1::AbstractArray, t2::AbstractArray)
     reshaped_tensor2 = reshape(t2, ones(Int, ndims(t1))..., size(t2)...)
     return reshaped_tensor1 .* reshaped_tensor2
 end
-  
+
 
 function matrix_tensor_congruence_TA(matrix::AbstractMatrix, tensor::AbstractArray)
     k = ndims(tensor)
@@ -157,7 +157,8 @@ end
 # TODO: use the more general functions from above, use these only for tests
 
 function axis_core_tensor_normalized_3(_d)
-  C = zeros(QQ,_d,_d,_d);
+  C = fill(zero(QQ), _d, _d, _d)
+  #C = zeros(QQ,_d,_d,_d);
   for al in (1:_d)
     for be in (1:_d)
       for ga in (1:_d)

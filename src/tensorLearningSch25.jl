@@ -1,5 +1,6 @@
 export
-  tensor_learning_3
+#  tensor_learning_3,
+  recover
 
 #function generic_transform(_d,_max_int=10)
 #   A = QQ.(rand(-1*_max_int:_max_int, _d, _d))
@@ -157,4 +158,40 @@ function tensor_learning_3(G_)
     Q = Matrix(Qlow)*Matrix(Qdiag)*Matrix(Qup)*Matrix(Q)
   end
   return Q
+end
+
+
+
+
+function recover(S::TruncatedTensorAlgebraElem; 
+                 C::Union{TruncatedTensorAlgebraElem,Nothing}=nothing, 
+                 algorithm::Symbol=:default)
+
+    d = base_dimension(parent(S))
+    k = truncation_level(parent(S))
+
+    if algorithm == :default || algorithm == :Buchberger
+        @assert C !== nothing "Argument C must be provided for algorithm=:default"
+        m = base_dimension(parent(C))  
+      
+        R, a = PolynomialRing(QQ, :a => (1:d, 1:m))
+
+        I = ideal(R, vec(S - a*C))
+
+        @assert dim(I) == 0 "Ideal dimension should be 0"
+        @assert degree(I) == 1 "Ideal degree should be 1"
+
+   
+        return leading_coefficient.(normal_form.(a, Ref(I)))
+
+    elseif algorithm == :Sch25
+        @assert eltype(S.elem[1]) <: Rational "Ground algebra must be QQ for Sch25"
+        @assert k == 3 "Algorithm Sch25 relys on truncation level k=3"
+
+        S_array =  6 .* S.elem[4] 
+        return inv(tensor_learning_3(S_array))
+
+    else
+        error("Unknown algorithm: $algorithm")
+    end
 end

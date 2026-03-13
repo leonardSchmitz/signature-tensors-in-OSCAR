@@ -8,11 +8,9 @@
         for t in (1:nr_rec)
           A = generic_transform_GL(d);
           G = A*C;
-          F = a*C;
-          I = ideal(R,vec(F-G));
-          @test dim(I) == 0
-          @test degree(I) == 1
-          @test normal_form.(a, Ref(I)) == Matrix{QQMPolyRingElem}(R.(A))
+          res1 = recover(S,C,algorithm=:Buchberger)
+          res2 = recover(S,C,algorithm=:Sch25)
+          @test res1==res2
         end
     end
 
@@ -34,14 +32,13 @@
 
     @testset "tensor learning with Sch25" begin
       for d in [2,3,4,10]
-        C = axis_core_tensor_normalized_3(d);
+        T= TruncatedTensorAlgebra(QQ,d,3)
         nr_rec = 1000;
         for t in (1:nr_rec)
           A = generic_transform_GL(d);
-          G = matrix_tensor_congruence_3(A,C);
-          Q = tensor_learning_3(G);
-          @assert matrix_tensor_congruence_3(Q,G) == C
-          @assert inv(Q) == A
+          G= sig(T,:pwln,coef=A)
+          Q = recover(G,algorithm=:Sch25)
+          @test Q == A
         end
       end
     end

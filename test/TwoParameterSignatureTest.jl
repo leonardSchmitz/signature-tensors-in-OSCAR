@@ -92,14 +92,14 @@
         n = 3
         shape = (m, n)
 
-        for coef in 1:20
+        for ntry in 1:20
 
             d = rand(2:8)
             T = TruncatedTensorAlgebra(QQ, d, 4, sequence_type=:p2id)
             
             coef=rand(-20:20,d,m*n)
 
-            pwbln  = sig(T, :pwbln, coef=coef, shape=shape)
+            pwbln  = sig(T, :pwbln, coef=coef, shape=shape, algorithm=:congruence)
             pwbln2 = sig(T, :pwbln, coef=coef, shape=shape, algorithm=:LS26)
 
             @test pwbln == pwbln2

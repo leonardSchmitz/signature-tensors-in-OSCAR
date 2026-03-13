@@ -348,7 +348,7 @@ end
 """
     sig(
         T::TruncatedTensorAlgebra,
-        path_type::Symbol;
+        geom_type::Symbol;
         coef = [],
         composition::Vector{Int} = Int[],
         regularity::Int = 0,
@@ -363,17 +363,17 @@ inside the truncated tensor algebra `T`.
   Truncated tensor algebra specifying the dimension, truncation level,
   base algebra, and signature type.
 
-- `path_type::Symbol`  
+- `geom_type::Symbol`  
   Type of path whose signature is to be computed. Supported values include:
   
   # Path types and algorithms
 
- path_type = :point
+ geom_type = :point
    Creates the signature of a constant path.
    This corresponds to the unit signature, where the level-0 component is 1
    and all higher levels are zero.
 
- path_type = :axis
+ geom_type = :axis
    Creates the signature of an axis path, i.e. a path that moves only along
    coordinate axes.
 
@@ -385,10 +385,10 @@ inside the truncated tensor algebra `T`.
      algorithm = :Chen
        Computes the signature using Chen’s identity.
 
-  path_type = :mono
+  geom_type = :mono
    Computes the signature of a monomial path.
 
- path_type = :pwln
+ geom_type = :pwln
  Computes the signature of a piecewise linear path.
 
    Additional arguments:
@@ -401,12 +401,12 @@ inside the truncated tensor algebra `T`.
      algorithm = :congruence
        Computes the signature using matrix tensor congruence.
 
-  path_type = :pwmon
+  geom_type = :pwmon
 """
 sig
 
 function sig(T::TruncatedTensorAlgebra{R},
-             path_type::Symbol; 
+             geom_type::Symbol; 
              coef=[], shape=[], 
              composition::Vector{Int}=Int[],
              regularity::Int=0,
@@ -415,56 +415,56 @@ function sig(T::TruncatedTensorAlgebra{R},
     seq_type = sequence_type(T)
 
     if seq_type == :iis
-        if path_type == :point && coef == [] && algorithm == :default
+        if geom_type == :point && coef == [] && algorithm == :default
             return one(T)
-        elseif path_type == :segment
+        elseif geom_type == :segment
             return sig_segment_TA(T, Array(coef))
-        elseif path_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
+        elseif geom_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
             return sigAxis_TA_ClosedForm(T)
-        elseif path_type == :axis && coef == [] && algorithm == :Chen
+        elseif geom_type == :axis && coef == [] && algorithm == :Chen
             return sig_axis_TA(T)
-        elseif path_type == :mono && coef == [] && algorithm == :default
+        elseif geom_type == :mono && coef == [] && algorithm == :default
             return sig_mono_TA(T)
-        elseif path_type == :pwln && algorithm == :congruence
+        elseif geom_type == :pwln && algorithm == :congruence
             return sig_pwln_TA_Congruence(T, Array(coef))
-        elseif path_type == :pwln && (algorithm == :Chen || algorithm == :default)
+        elseif geom_type == :pwln && (algorithm == :Chen || algorithm == :default)
             return sig_pwln_TA_chen(T, Array(coef))
-        elseif path_type == :pwmon && algorithm == :Chen
+        elseif geom_type == :pwmon && algorithm == :Chen
             return sig_pw_mono_chen(T, composition, regularity)
-        elseif path_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
+        elseif geom_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
             return sig_pw_mono_ALS26(T, composition, regularity)
-        elseif path_type == :poly && ( algorithm == :congruence || algorithm == :default )
+        elseif geom_type == :poly && ( algorithm == :congruence || algorithm == :default )
             return sig_poly_TA(T,coef)
-        elseif path_type == :poly && ( algorithm == :ARS26 )
+        elseif geom_type == :poly && ( algorithm == :ARS26 )
             return sig_poly_TA_ARS(T,coef)
-        elseif path_type == :spline 
+        elseif geom_type == :spline 
             return sig_spline(T,coef,composition,regularity) 
         else
             throw(ArgumentError("sig not supported for given arguments"))
         end
 
     elseif seq_type == :p2id
-        if path_type == :point && coef == [] && algorithm == :default
+        if geom_type == :point && coef == [] && algorithm == :default
             return one(T)
-        elseif path_type == :mono && coef == [] && algorithm == :default
+        elseif geom_type == :mono && coef == [] && algorithm == :default
             return moment_membrane_p2id(T, shape[1], shape[2])
-        elseif path_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
+        elseif geom_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
             return sigAxis_p2id_ClosedForm(T, shape[1], shape[2])
-        elseif path_type == :axis && coef == [] && algorithm == :Chen
+        elseif geom_type == :axis && coef == [] && algorithm == :Chen
             return sigAxis_p2id_Chen(T, shape[1], shape[2])
-        elseif path_type == :poly && algorithm == :default
+        elseif geom_type == :poly && algorithm == :default
             if ndims(coef) == 2
                 return sig2parPoly_fromMatrix(T, coef, shape[1], shape[2])
             else
                 return sig2parPoly(T, coef)
             end
-        elseif path_type == :pwbln && (algorithm == :default || algorithm == :congruence)
+        elseif geom_type == :pwbln && (algorithm == :default || algorithm == :congruence)
             if ndims(coef) == 2
                 return sig_pwbln_p2id_Congruence(T, coef, shape[1], shape[2])
             else
                 return sig_pwbln_p2id_Congruence_fromTensor(T, coef, size(coef,1), size(coef,2))
             end
-        elseif path_type == :pwbln && algorithm == :LS26
+        elseif geom_type == :pwbln && algorithm == :LS26
             if ndims(coef) == 2
                 return sigPiecewiseBilinear_TA(T, coef, shape)
             else

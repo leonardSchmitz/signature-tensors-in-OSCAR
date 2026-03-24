@@ -44,7 +44,6 @@ Base.exp
 Base.log
 Base.vec
 Base.:(==)
-AbstractAlgebra.gens
 ```
 
 ## Utilities

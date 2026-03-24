@@ -1,5 +1,5 @@
 using Documenter
-using SignatureTensors  # <- tu módulo principal
+using SignatureTensors 
 
 makedocs(
     sitename = "SignatureTensors.jl",
@@ -8,10 +8,11 @@ makedocs(
         "Home" => "index.md",
         "API" => "api.md",
     ],
+    strict = false,  
 )
+
 
 deploydocs(
     repo = "github.com/leonardSchmitz/signature-tensors-in-OSCAR.git",
 )
 
-# deploydocs()  # Descomenta solo si quieres subir a GitHub Pages

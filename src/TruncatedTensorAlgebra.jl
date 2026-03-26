@@ -2834,34 +2834,30 @@ function sig_lott_1d(pathSeq::Vector{<:AbstractVector}, word::Vector{Int})
     k = length(word)
     T = eltype(pathSeq[1])
 
-    
-    sheet = fill(zero(T), n, k+1, k+1)
+    # CORRECTO: sheet es n × (k+1), no n × (k+1) × (k+1)
+    sheet = fill(zero(T), n, k+1)
     for j in 1:n
-        sheet[j, 1, 1] += one(T)
+        sheet[j, 1] = one(T)
     end
 
     for p in 1:k
         letter = word[p]
         pvec = pathSeq[letter]
 
-
         for j in 1:n
-            sheet[j, :, :] .*= pvec[j]
-            sheet[j, :, :] = weighted_shift(sheet[j, :, :]) 
+            # Multiplicar y aplicar weighted_shift_1d (¡1D!)
+            sheet[j, :] .*= pvec[j]
+            sheet[j, :] = weighted_shift_1d(sheet[j, :])
         end
 
-
-        
-
+        # Acumulación: propagar hacia el siguiente nodo
         for j in 1:(n-1)
-            csum = vec(column_sum(sheet[j, :, :]))
-            sheet[j+1, 1, :] .+= csum
+            sheet[j+1, 1] += sum(sheet[j, :])  # solo necesitamos la suma del vector
         end
     end
 
-
-    out = sum(row_sum(column_sum(sheet[n, :, :])))
-    return out
+    # Resultado final: suma del vector del último nodo
+    return sum(sheet[n, :])
 end
 
 
@@ -2921,10 +2917,6 @@ function sig_pwln_TA_LS(
 
     for j in 1:k
         elem_out[j+1] = compute_level(j)
-    end
-
-    for j in 1:k
-        elem_out[j+1]=elem_out[j+1]*factorial(j)
     end
 
     T2 = TruncatedTensorAlgebra(Rnew, d, k, :iis)

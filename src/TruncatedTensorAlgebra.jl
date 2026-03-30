@@ -468,7 +468,7 @@ inside the truncated tensor algebra `T`.
   - `:axis`  
     Signature of a path moving along coordinate axes.  
     Optional `algorithm`:
-      - `:AFS19` – Closed-form formulas (Amendola-Friz-Sturmfels 2019)
+      - `:AFS19` – Closed-form formulas [AFS2019](@cite)
       - `:Chen` – Computes using Chen’s identity
 
   - `:mono`  
@@ -477,13 +477,13 @@ inside the truncated tensor algebra `T`.
   - `:pwln`  
     Piecewise linear path. Optional arguments:
       - `coef` – Matrix of coefficients
-      - `algorithm` – `:Chen`, `:congruence`, or `:LS26`
+      - `algorithm` – `:Chen`, `:congruence`, or `:LS26` [schmitz2025efficientalgorithmtensorlearning](@cite)
 
   - `:pwmon`  
     Piecewise monomial path. Optional arguments:
       - `composition` – Exponents of each segment
       - `regularity` – Regularity of the path
-      - `algorithm` – `:Chen` or `:ALS26`
+      - `algorithm` – `:Chen` or `:ALS26` 
 
   - `:poly`  
     Polynomial path. Optional `algorithm`:
@@ -509,13 +509,7 @@ inside the truncated tensor algebra `T`.
 - `composition` and `regularity` are used for piecewise monomial or spline paths.
 - Throws `ArgumentError` if unsupported combination of arguments is provided.
 """
-function sig(T::TruncatedTensorAlgebra{R},
-             geom_type::Symbol; 
-             coef=[], shape=[], 
-             composition::Vector{Int}=Int[],
-             regularity::Int=0,
-             algorithm::Symbol=:default) where R
-
+function sig(T::TruncatedTensorAlgebra{R}, geom_type::Symbol; coef=[], shape=[], composition::Vector{Int}=Int[], regularity::Int=0,  algorithm::Symbol=:default) where R
     seq_type = sequence_type(T)
 
     if seq_type == :iis

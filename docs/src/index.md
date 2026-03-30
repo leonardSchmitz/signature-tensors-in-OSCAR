@@ -14,7 +14,7 @@ The package supports:
 
 - **Path signatures** — iterated-integrals signatures of piecewise linear, polynomial, spline, axis, and monomial paths over arbitrary OSCAR rings.
 - **Membrane signatures** — two-parameter (id-)signatures of piecewise bilinear and polynomial membranes, extending the one-parameter theory.
-- **Tensor learning** — recovery of paths from their signature tensors via polynomial systems and Gröbner bases, including the efficient algorithm from [Sch25].
+- **Tensor learning** — recovery of paths from their signature tensors via polynomial systems and Gröbner bases, including the efficient algorithm from [schmitz2025efficientalgorithmtensorlearning](@cite).
 - **Lie group barycenters** — computation of Fréchet means on the free nilpotent Lie group $G_{d,k}$, with several algorithm options including BCH-based and polynomial map approaches.
 - **Algebraic operations** — group multiplication, inverse, logarithm, exponential, and graded projections on truncated tensor algebra elements.
 
@@ -71,8 +71,7 @@ Depth = 2
 
 | Name | Affiliation | Email |
 |------|-------------|-------|
-| Gabriel Riffo | TU Berlin | [riffo@tu-berlin.de](mailto:riffo@tu-berlin.de) |
+| Gabriel Riffo | TU Berlin | [riffo@tu-berlin.de](mailto:riffo@tu-berlin.de)    |
 | Leonard Schmitz | TU Berlin | [lschmitz@math.tu-berlin.de](mailto:lschmitz@math.tu-berlin.de) |
 
 Funded by the Deutsche Forschungsgemeinschaft (DFG) — [CRC/TRR 388 *"Rough Analysis, Stochastic Dynamics and Related Fields"*](https://sites.google.com/view/trr388/) — Project A04 and B01, 516748464.
-

@@ -509,6 +509,86 @@ inside the truncated tensor algebra `T`.
 - `composition` and `regularity` are used for piecewise monomial or spline paths.
 - Throws `ArgumentError` if unsupported combination of arguments is provided.
 """
+function sig(T::TruncatedTensorAlgebra{R},
+             geom_type::Symbol; 
+             coef=[], shape=[], 
+             composition::Vector{Int}=Int[],
+             regularity::Int=0,
+             algorithm::Symbol=:default) where R
+
+    seq_type = sequence_type(T)
+
+    if seq_type == :iis
+        if geom_type == :point && coef == [] && algorithm == :default
+            return one(T)
+        elseif geom_type == :segment
+            return sig_segment_TA(T, Array(coef))
+        elseif geom_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
+            return sigAxis_TA_ClosedForm(T)
+        elseif geom_type == :axis && coef == [] && algorithm == :Chen
+            return sig_axis_TA(T)
+        elseif geom_type == :mono && coef == [] && algorithm == :default
+            return sig_mono_TA(T)
+        elseif geom_type == :pwln && algorithm == :congruence
+            return sig_pwln_TA_Congruence(T, Array(coef))
+        elseif geom_type == :pwln && (algorithm == :Chen || algorithm == :default)
+            return sig_pwln_TA_chen(T, Array(coef))
+        elseif geom_type == :pwln && algorithm == :LS
+            return sig_pwln_TA_LS(T,Array(coef))
+        elseif geom_type == :pwmon && algorithm == :Chen
+            return sig_pw_mono_chen(T, composition, regularity)
+        elseif geom_type == :pwmon && (algorithm == :ALS26 || algorithm == :default)
+            return sig_pw_mono_ALS26(T, composition, regularity)
+        elseif geom_type == :poly && ( algorithm == :congruence || algorithm == :default )
+            return sig_poly_TA(T,coef)
+        elseif geom_type == :poly && ( algorithm == :ARS26 )
+            return sig_poly_TA_ARS(T,coef)
+        elseif geom_type == :spline 
+            return sig_spline(T,coef,composition,regularity) 
+        else
+            throw(ArgumentError("sig not supported for given arguments"))
+        end
+
+    elseif seq_type == :p2id
+        if geom_type == :point && coef == [] && algorithm == :default
+            return one(T)
+        elseif geom_type == :mono && coef == [] && algorithm == :default
+            return moment_membrane_p2id(T, shape[1], shape[2])
+        elseif geom_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
+            return sigAxis_p2id_ClosedForm(T, shape[1], shape[2])
+        elseif geom_type == :axis && coef == [] && algorithm == :Chen
+            return sigAxis_p2id_Chen(T, shape[1], shape[2])
+        elseif geom_type == :poly && algorithm == :default
+            if ndims(coef) == 2
+                return sig2parPoly_fromMatrix(T, coef, shape[1], shape[2])
+            else
+                return sig2parPoly(T, coef)
+            end
+        elseif geom_type == :pwbln && (algorithm == :default || algorithm == :congruence)
+            if ndims(coef) == 2
+                return sig_pwbln_p2id_Congruence(T, coef, shape[1], shape[2])
+            else
+                return sig_pwbln_p2id_Congruence_fromTensor(T, coef, size(coef,1), size(coef,2))
+            end
+        elseif geom_type == :pwbln && algorithm == :LS26
+            if ndims(coef) == 2
+                return sigPiecewiseBilinear_TA(T, coef, shape)
+            else
+               return sigPiecewiseBilinear_fromTensor_TA(T, coef, [size(coef,1), size(coef,2)])
+            end
+        else
+            throw(ArgumentError("sig not supported for given arguments"))
+        end
+    elseif seq_type == :p2
+        throw(ArgumentError("sig not supported for given arguments"))
+
+    else
+        throw(ArgumentError("sig not supported for given arguments"))
+    end
+end
+
+
+
 function Base.show(io::IO, x::TruncatedTensorAlgebraElem)
     for (i, t) in enumerate(x.elem)
         show(io, MIME("text/plain"), t)

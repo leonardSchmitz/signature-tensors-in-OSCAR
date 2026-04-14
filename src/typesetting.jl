@@ -40,7 +40,6 @@ a tuple `(R, a)` where `R` is the ring and `a` is a matrix of generators.
 """
 function polynomial_ring_sig_transform(_dim::Int,_order::Int)
    return  polynomial_ring(QQ, _magic_symbols_mat_a(_dim,_order))
-#   return  polynomial_ring(QQ, :a => (1:_dim,1:_order))
 end
 
 function _magic_symbols_mat_a(_dim::Int, _order::Int)
@@ -69,7 +68,7 @@ function tensor_to_latex_folded(G::Array{T,3}; name="G", s=0) where T
     @assert d1 == d2 == d3 "Tensor must be cubic d×d×d"
     rows_latex = String[]
     for i in 1:d1
-        # Collect all entries in the i-th “row of slices”
+
         row_entries = []
         for k in 1:d3
             for j in 1:d2
@@ -82,10 +81,9 @@ function tensor_to_latex_folded(G::Array{T,3}; name="G", s=0) where T
                 end 
             end
             if k < d3
-                push!(row_entries, "\\vrule")  # vertical separator between slices
+                push!(row_entries, "\\vrule") 
             end
         end
-        # Join entries of this row with &
         push!(rows_latex, join(row_entries, " & "))
     end
     body = join(rows_latex, " \\\\")
@@ -97,9 +95,8 @@ end
 
 function latex_tabular_benchmark_two_algorithms(A, B)
     d = size(A,1)
-    labels = [2^i for i in 1:d]   # 2,4,8,16,...
+    labels = [2^i for i in 1:d]  
 
-    # header row
     header = " & " * join(labels, " & ") * " \\\\\\hline\n"
 
     rows = String[]

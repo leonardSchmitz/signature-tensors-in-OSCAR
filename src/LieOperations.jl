@@ -3,10 +3,9 @@ export
   dim_free_nil_lie_alg 
 
 function nextword(k::Int, w::Vector{Int}, alphabet::Vector{Int})
-    # repeat w enough times and truncate to length n
     reps = (k ÷ length(w)) + 1
     x = repeat(w, reps)[1:k]
-    # remove trailing maximal letters
+
     while !isempty(x) && x[end] == alphabet[end]
         pop!(x)
     end

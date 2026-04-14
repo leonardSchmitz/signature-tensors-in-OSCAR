@@ -3,9 +3,7 @@ export
 
 
 ################################################################################
-#
 #  Integration
-#
 ################################################################################
 
 function exponent_vectors(a::MPolyRingElem{T}; inplace::Bool = false) where T <: RingElement

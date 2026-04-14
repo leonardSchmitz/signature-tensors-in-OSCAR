@@ -1,6 +1,5 @@
-export 
-    benchmark_signature,
-    benchmark_membrane
+
+
 
 function run_with_timeout_julia(f::Function, timeout::Int=5)
     t = Threads.@spawn f() 
@@ -41,11 +40,10 @@ function benchmark_signature(ds::Vector{Int}, ms::Vector{Int}, k::Int;
                     gc_time[(d,m)]   = -1
                     memory[(d,m)]    =  -1
             else
-                            # Crear benchmarkable y correrlo
                 benchset = @benchmarkable sig($T, $signature_path, coef=$A, algorithm=$algorithm) seconds=Seconds samples=num_samples
                 bench = run(benchset)
 
-                # Guardar medianos en nanosegundos / bytes
+
                 wall_time[(d,m)] = median(bench).time / 1e9   
                 gc_time[(d,m)]   = median(bench).gctime / 1e9 
                 memory[(d,m)]    = median(bench).memory  / 1e6       
@@ -137,3 +135,4 @@ function benchmark_membrane(ds::Vector{Int}, ms::Vector{Int}, ns::Vector{Int}, k
 
     return wall_matrix, gc_matrix, mem_matrix
 end
+

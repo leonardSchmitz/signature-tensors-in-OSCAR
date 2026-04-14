@@ -1,15 +1,14 @@
 """
-Welcome to SignatureTensors v0.1
+Welcome to SignatureTensors v1.0.0
 
 This package allows computing and working with signatures of rough paths
 using algebraic methods within OSCAR.
 
 For more information, visit:
-https://github.com/leonardSchmitz/signature-tensors-in-OSCAR
+https://leonardschmitz.github.io/SignatureTensors.jl/
 """
 module SignatureTensors
 using Oscar;
-using BenchmarkTools;
 
 
 
@@ -23,6 +22,6 @@ include("matrixOperations.jl")
 include("polynomialTransformations.jl")
 include("TruncatedTensorAlgebra.jl")
 include("tensorLearningSch25.jl")
-include("Benchmarkfunction.jl")
+
 
 end 

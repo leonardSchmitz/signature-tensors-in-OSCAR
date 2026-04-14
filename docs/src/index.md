@@ -7,7 +7,7 @@ CollapsedDocStrings=true
 
 **SignatureTensors.jl** is a Julia package for computing and manipulating signature tensors of paths and membranes, built on top of the [OSCAR](https://www.oscar-system.org) computer algebra system.
 
-> **Version:** 0.5 — No support is guaranteed.
+> **Version:** 1.0.0.
 
 ---
 
@@ -15,13 +15,8 @@ CollapsedDocStrings=true
 
 Path signatures, introduced by Terry Lyons in the framework of rough path theory
 [lyons1998differential, lyons2002system, lyons2007differential](@cite),
-provide a canonical and robust way to encode paths as algebraic objects via iterated integrals. This viewpoint has become fundamental in modern stochastic analysis and has been extensively developed in the literature, notably in the work of Friz and Victoir[friz2010multidimensional](@cite), as well as in contributions by researchers such as Massimiliano Gubinelli, Terry Lyons, and others. Further foundational and comprehensive treatments can be found in the monographs of Lyons, Caruana and Lévy [lyons2007differential](@cite), and Friz and Hairer [friz2020course](@cite).
-
-From an algebraic perspective, signatures take values in the tensor algebra and,
-when truncated, in the free nilpotent Lie group $G_{d,k}$. Their structure is deeply
-connected to classical results on iterated integrals due to Kuo-Tsai Chen [chen1957integration, chen1977iterated](@cite). Modern algebraic viewpoints connecting rough paths, Lie theory, and combinatorics are developed in [friz2010multidimensional, friz2020course](@cite).
-
-Beyond their analytical origins, signatures have found applications in a wide range
+provide a canonical and robust way to encode paths as algebraic objects via iterated integrals. This viewpoint has become fundamental in modern stochastic analysis and has been extensively developed in the literature, notably in the work of [friz2010multidimensional](@cite). Further foundational and comprehensive treatments can be found in the monographs of [lyons2007differential](@cite), and  [friz2020course](@cite). Their structure is deeply
+connected to classical results on iterated integrals due to [chen1957integration, chen1977iterated](@cite). Beyond their analytical origins, signatures have found applications in a wide range
 of areas, including mathematical finance [cuchiero2026](@cite), machine learning [chevyrev2026](@cite), and topological data analysis [chevyrev2018persistence](@cite).
 
 ## Overview
@@ -91,3 +86,4 @@ Depth = 2
 | Leonard Schmitz | TU Berlin | [lschmitz@math.tu-berlin.de](mailto:lschmitz@math.tu-berlin.de) |
 
 Funded by the Deutsche Forschungsgemeinschaft (DFG) — [CRC/TRR 388 *"Rough Analysis, Stochastic Dynamics and Related Fields"*](https://sites.google.com/view/trr388/) — Project A04 and B01, 516748464.
+

@@ -16,7 +16,6 @@ export
   one_hot
 
 
-#TODO: remove ≤ 
 
 function concatenate_tensors(tensor1::Array, tensor2::Array)
     reshaped_tensor1 = reshape(tensor1, size(tensor1)..., ones(Int, ndims(tensor2))...)
@@ -24,8 +23,7 @@ function concatenate_tensors(tensor1::Array, tensor2::Array)
     return reshaped_tensor1 .* reshaped_tensor2
 end
 
-function matrix_tensor_multiply(matrix::Array, tensor::Array, index::Int)
-    """
+"""
     Perform matrix-tensor multiplication along the specified axis of a k-tensor.
     Parameters:
         matrix::Array: The matrix to multiply (2D array).
@@ -33,21 +31,23 @@ function matrix_tensor_multiply(matrix::Array, tensor::Array, index::Int)
         index::Int: The axis of the tensor to perform the multiplication.
     Returns:
         A new tensor resulting from the multiplication.
-    """
-    # Ensure the dimensions match for contraction
+"""
+
+function matrix_tensor_multiply(matrix::Array, tensor::Array, index::Int)
+
     @assert 1 <= index <= ndims(tensor) "Index must be a valid axis of the tensor."
     @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
-    # Move the target axis to the first dimension
+
     perm = [index; 1:index-1; index+1:ndims(tensor)]
     tensor_perm = permutedims(tensor, perm)
-    # Reshape the tensor to (size along index, rest)
+
     reshaped_tensor = reshape(tensor_perm, size(tensor, index), :)
-    # Perform matrix multiplication
-    result = matrix * reshaped_tensor  # Result shape: (matrix rows, remaining dimensions)
-    # Reshape back to the original dimensions
+
+    result = matrix * reshaped_tensor 
+
     result_shape = (size(matrix, 1), size(tensor)[[1:index-1; index+1:end]]...)
     result = reshape(result, result_shape)
-    # Undo the permutation to restore original axes order
+
     inv_perm = invperm(perm)
     return permutedims(result, inv_perm)
 end
@@ -58,7 +58,7 @@ function matrix_tensor_congruence(matrix::Array, tensor::Array)
       return tensor
     end 
     res = tensor
-    #res = Array{eltype(tensor)}(undef, size(matrix, 1)*ones(Int,k)...)
+
     for i in (1:k)
         @assert size(tensor, i) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
         res = matrix_tensor_multiply(matrix, res, i)
@@ -93,7 +93,6 @@ function matrix_tensor_multiply_TA(matrix::AbstractMatrix, tensor::AbstractArray
     @assert 1 <= index <= ndims(tensor) "Index must be a valid axis of the tensor."
     @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
 
-    # 1) Matric and tensor type 
     matrix = convert.(eltype(tensor), matrix)
 
     perm = [index; 1:index-1; index+1:ndims(tensor)]
@@ -134,8 +133,9 @@ A new tensor of the same order as `T` but with the `mode`-th dimension replaced 
   5. Permuting the axes back to the original order.
 # Example
 ```julia
-T = QQ.(rand(3,4,2))          # 3×4×2 tensor
-A = QQ.[rand(-20:20,5,3)]            # 5×3 matrix to multiply along mode 1
+using Oscar
+T = QQ.(rand(-40:40,3,4,2))          # 3×4×2 tensor
+A = QQ.(rand(-20:20,5,3))            # 5×3 matrix to multiply along mode 1
 R = QQ               # base ring
 T_new = mode_product(T, A, 1, R)
 size(T_new)               # returns (5,4,2)
@@ -146,38 +146,29 @@ Throws an error if the mode-th dimension of T does not match the number of colum
 function mode_product(T::AbstractArray, A::AbstractMatrix, mode::Int, R)
     d_new, d = size(A)
 
-    # Check that mode dimension matches
     dims = size(T)
     dims[mode] == d || error("Mode $mode has size $(dims[mode]), expected $d")
 
-    # Convert A to base ring elements
     A_ring = reshape([one(R) * a for a in A], size(A))
 
-    # Move the mode-th axis to the first dimension
     perm = (mode, setdiff(1:ndims(T), mode)...)
     T_perm = permutedims(T, perm)
 
-    # Matricize tensor: mode dimension becomes rows
     T_mat = reshape(T_perm, d, :)
 
-    # Multiply matrix by tensor matricization
-    T_out_mat = A_ring * T_mat   # Linear transform along mode
+    T_out_mat = A_ring * T_mat   
 
-    # Reshape back to tensor with new mode dimension
     new_dims = (d_new, dims[1:mode-1]..., dims[mode+1:end]...)
     T_out = reshape(T_out_mat, new_dims)
 
-    # Permute axes back to original order
     invp = invperm(perm)
     return permutedims(T_out, invp)
 end
 
-# functions from Schmitz 2026 - An efficient algorithm for tensor learing
-# TODO: use the more general functions from above, use these only for tests
+# functions from Schmitz 2026 - An efficient algorithm for tensor learing, use for test
 
 function axis_core_tensor_normalized_3(_d)
   C = fill(zero(QQ), _d, _d, _d)
-  #C = zeros(QQ,_d,_d,_d);
   for al in (1:_d)
     for be in (1:_d)
       for ga in (1:_d)
@@ -192,7 +183,7 @@ function axis_core_tensor_normalized_3(_d)
         end
       end
     end
-  end # QQ.(C) == tensor_sequence(sig_axis(TTSd))[4];
+  end 
   return C
 end
 
@@ -224,23 +215,20 @@ function swap_slice_all_3!(G,i::Int,j::Int)
 end
 
 function matrix_tensor_multiply_3!(matrix::Array, tensor::Array{T,3}, index::Int) where T
-    @assert 1 ≤ index ≤ 3 "Index must be 1, 2, or 3."
+    @assert 1 <=index <=3 "Index must be 1, 2, or 3."
     @assert size(tensor, index) == size(matrix, 2) "Dimension mismatch."
     if index == 1
-        # (n, a, b) → (m, a, b)
+
         resh = reshape(tensor, size(tensor,1), :)
         result = matrix * resh
         copyto!(tensor, reshape(result, size(matrix,1), size(tensor,2), size(tensor,3)))
     elseif index == 2
-        # (a, n, b) → (a, m, b)
-        # permute to (n, a, b)
         tensor_perm = permutedims(tensor, (2,1,3))
         resh = reshape(tensor_perm, size(tensor,2), :)
         result = matrix * resh
         result = reshape(result, size(matrix,1), size(tensor,1), size(tensor,3))
         copyto!(tensor, permutedims(result, (2,1,3)))
-    else  # index == 3
-        # (a, b, n) → (a, b, m)
+    else  
         tensor_perm = permutedims(tensor, (3,1,2))
         resh = reshape(tensor_perm, size(tensor,3), :)
         result = matrix * resh
@@ -270,20 +258,20 @@ function matrix_tensor_multiply_3(matrix::Array, tensor::Array, index::Int)
     Returns:
         A new tensor resulting from the multiplication.
     """
-    # Ensure the dimensions match for contraction
-    @assert 1 ≤ index ≤ ndims(tensor) "Index must be a valid axis of the tensor."
+
+    @assert 1 <=index <=ndims(tensor) "Index must be a valid axis of the tensor."
     @assert size(tensor, index) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
-    # Move the target axis to the first dimension
+
     perm = [index; 1:index-1; index+1:ndims(tensor)]
     tensor_perm = permutedims(tensor, perm)
-    # Reshape the tensor to (size along index, rest)
+
     reshaped_tensor = reshape(tensor_perm, size(tensor, index), :)
-    # Perform matrix multiplication
-    result = matrix * reshaped_tensor  # Result shape: (matrix rows, remaining dimensions)
-    # Reshape back to the original dimensions
+
+    result = matrix * reshaped_tensor 
+
     result_shape = (size(matrix, 1), size(tensor)[[1:index-1; index+1:end]]...)
     result = reshape(result, result_shape)
-    # Undo the permutation to restore original axes order
+
     inv_perm = invperm(perm)
     return permutedims(result, inv_perm)
 end
@@ -294,7 +282,7 @@ function matrix_tensor_congruence_3(matrix::Array, tensor::Array)
       return tensor
     end 
     res = tensor
-    #res = Array{eltype(tensor)}(undef, size(matrix, 1)*ones(Int,k)...)
+
     for i in (1:k)
         @assert size(tensor, i) == size(matrix, 2) "Matrix and tensor dimensions do not align!"
         res = matrix_tensor_multiply_3(matrix, res, i)

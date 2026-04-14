@@ -21,10 +21,8 @@ function _magic_symbols_sig_multivariate(trunc_level::Int,
   for i in 1:trunc_level
      for j in 1:num_samples
       if i > 9 || j > 9
-        #s[i, j] = "s$(_index_number(i))₋$(_index_number(j))"
         s[i, j] = "s$(_index_number(j))₋$(_superscript_number(i))"
       else
-        #s[i, j] = "s$(_index_number(i))$(_index_number(j))"
         s[i, j] = "s$(_index_number(j))$(_superscript_number(i))"
       end
     end
@@ -124,7 +122,6 @@ Base.parent(a::FreeTruncSigAlgMultivElem) = a.parent
 FreeTruncSigAlgMultivElem_to_polynomial(a::FreeTruncSigAlgMultivElem) = a.elem
 
 function trunc(f::FreeAssociativeAlgebraElem,_trunc_level::Int)
-  #A = parent(f)
   res = 0*f
   if iszero(f)
     return res
@@ -171,14 +168,12 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain",f::FreeTruncSigAlgMultivElem)
   A = parent(f) 
-  #trunc_level = A.trunc_level
   trunc_level = truncation_level(A)
-  #print(io,"$(f.elem) + O($(trunc_level+1))")
   print(io,"$(f.elem)")
 end
 
 #############################
-# special constructors
+# Special constructors
 #############################
 
 function Base.one(_T::FreeTruncSigAlgMultiv)
@@ -231,7 +226,6 @@ Returns the generators of the free algebra as `FreeTruncSigAlgMultivElem`s.
     F, s = free_trunc_sig_alg_multiv(3, 2)
     G = gens(F)
 """
-gens
 
 function Oscar.gens(F::FreeTruncSigAlgMultiv)
   free_alg = free_algebra(F)
@@ -271,7 +265,7 @@ end
 
 
 #############################
-# arithmetic
+# Arithmetic
 #############################
 
 function Base.:*(a::FreeTruncSigAlgMultivElem,
@@ -339,7 +333,7 @@ end
 
 
 ##################
-# barycenter constructors 
+# Barycenter Constructors 
 ##################
 """
     free_barycenter_2samples(trunc_level::Int)

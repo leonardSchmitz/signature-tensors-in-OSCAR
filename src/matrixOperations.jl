@@ -30,7 +30,7 @@ function QQMatrixU(d::Int)
   end 
 end
 
-# standard basis m times m matrix with one at (i,j) and zero elsewhere
+
 function QQMatrixE(m::Int,i::Int,j::Int)
   @assert i<=m
   @assert j<=m
@@ -60,23 +60,19 @@ end
 
 ############################################
 # signature matrices                       #
-# W_m=bary(sig(Ax^{m,1},...,sig(Ax^{m,N})) #
-# see Lem 7.6 for a definition             #
 ############################################
 
-# signature matrix of d-dimensional axis path
+
 function QQMatrixSigAxis(d::Int)
   Ud = strictly_upper_triangular_matrix([one(QQ) for i in (1:div((d-1)*d,2))]);
   return QQ(1,2)*identity_matrix(QQ,d)+Ud
 end
 
-# projected matrix of signature of d-dimensional axis path and origin 
 function QQMatrixBaryAxis1(d::Int)
   Ud = strictly_upper_triangular_matrix([one(QQ) for i in (1:div((d-1)*d,2))]);
   return QQ(1,4)*(Ud - transpose(Ud)) + QQ(1,8)*ones_matrix(QQ,d,d)
 end
 
-# W_m with m=[m1,m2]
 function QQMatrixBaryAxisAxis(m1::Int,m2::Int)
   d = m1 + m2
   tm1 = QQMatrixU(m1) - transpose(QQMatrixU(m1))
@@ -84,7 +80,6 @@ function QQMatrixBaryAxisAxis(m1::Int,m2::Int)
   return QQ(1,4)*block_diagonal_matrix([tm1,tm2]) + QQ(1,8)*ones_matrix(QQ,d,d)
 end
 
-# W_m with m=[m1,m2,m3]
 function QQMatrixBaryAxisAxisAxis(m1::Int,m2::Int,m3::Int)
   d = m1 + m2 + m3
   N = 3
@@ -94,7 +89,6 @@ function QQMatrixBaryAxisAxisAxis(m1::Int,m2::Int,m3::Int)
   return QQ(1,2*N)*block_diagonal_matrix([tm1,tm2,tm3]) + QQ(1,2*N*N)*ones_matrix(QQ,d,d)
 end
 
-# W_m with m=[m1,...,mN]
 function QQMatrixBaryNAxis(m::Vector{Int})
   d = sum(m)
   N = length(m)
@@ -106,7 +100,6 @@ end
 # hardcoded normal forms             #
 ######################################
 
-# see Lemma 7.5.
 function QQMatrixSigAxisNF(d::Int)
   H2m1 = QQ[0 1;-1 0]
   if is_odd(d)
@@ -121,7 +114,6 @@ function QQMatrixSigAxisNF(d::Int)
   return res
 end
 
-# see Lemma 7.3.
 function QQMatrixUdmUdTNF(d::Int)
   H2m1 = QQ[0 1;-1 0]
   if d == 2 
@@ -147,7 +139,6 @@ function add_row_column(a,s,i,j)
    return add_row(add_column(a,s,i,j),s,i,j)
 end
 
-# TODO: do we need this? This is only the first block? 
 function QQMatrixSigNF(S)
    d = size(S)[1]
    for i in (1:d)
@@ -175,10 +166,7 @@ end
 # transformation matrices #
 ###########################
 
-
-# TODO: do we need this? We do not export this at the moment. 
 function QQMatrixBaryAxis1NFtrafo(d::Int)
-  #TODO: issue with d=2
   dp12 = Int(floor((d+1)/2))
   t1 = identity_matrix(QQ,d)
   t2 = sum([-1*QQMatrixE(d,j,2*i) for i in (1:dp12) for j in (2*i+1:d)])
@@ -186,7 +174,6 @@ function QQMatrixBaryAxis1NFtrafo(d::Int)
   return t1+t2+t3
 end
 
-# according to the proof of Lemma 7.6. -- we omit the constant sqrt(2)
 function QQMatrixAxisNFtrafo(d::Int)
   if d == 2
     return  QQMatrixE(d,2,1) +  QQMatrixE(d,1,2) -  QQMatrixE(d,1,1)
@@ -202,7 +189,6 @@ function QQMatrixAxisNFtrafo(d::Int)
   return t4
 end
 
-# according to the proof of Lemma 7.3.
 function QQMatrixUdmUdTNFtrafo(d::Int)
   if d == 2
     return identity_matrix(QQ,d)
@@ -213,7 +199,6 @@ function QQMatrixUdmUdTNFtrafo(d::Int)
   return t1+t2
 end
 
-# P1 according to the proof of Prop 7.9 eq (7.10)
 function QQMatrixWNFP1m1oddHelpertrafo(m1::Int,m2::Int)
   d = m1 + m2
   return prod([prod([add_row(identity_matrix(QQ,m1+m2),(-1)^(m1-j)*one(QQ),m1-j,m1+m2-i) for i in (0:m2-1)]) for j in (0:m1-1)])

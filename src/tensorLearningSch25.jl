@@ -1,15 +1,6 @@
 export
-#  tensor_learning_3,
-  recover
+    recover
 
-#function generic_transform(_d,_max_int=10)
-#   A = QQ.(rand(-1*_max_int:_max_int, _d, _d))
-#   if is_invertible( matrix(QQ,A))
-#     return A
-#   else
-#     return generic_transform(_d,_max_int)
-#   end
-#end
 
 function toTriangularTrafo_last_2x2_up(G)
   d = size(G)[1]
@@ -73,8 +64,6 @@ function linrel_mat_vec(G,s)
   d = size(G)[1]
   nreq = binomial(d-1,2)
   nrun = d - s
-  #M = zeros(QQ,nreq,nrun)
-  #B = zeros(QQ,nreq)
   M = fill(zero(QQ), nreq, nrun)
   B = fill(zero(QQ), nreq)
   i = 1
@@ -92,7 +81,7 @@ function toTriangularTrafo_last_sxs_up_RAND(s,G)
   d = size(G)[1]
   T = identity_matrix(QQ,d)
   M,B = linrel_mat_vec(G,s)
-  for att in (1:100) # Et hätt noch emmer jot jejange
+  for att in (1:100) 
     issolv,x = can_solve_with_solution(matrix(QQ,M),B,side=:right)
     if issolv && rank(matrix(QQ,M))==d-s
       Qup = Matrix(identity_matrix(QQ,d))
@@ -112,13 +101,6 @@ function toTriangularTrafo_last_sxs_up_RAND(s,G)
   return identity_matrix(QQ,d)
 end
 
-#function QQMatrixE(m::Int,i::Int,j::Int)
-#  @assert i<=m
-#  @assert j<=m
-#  M = zero_matrix(QQ,m,m)
-#  M[i,j] = one(QQ)
-#  return M
-#end
 
 function diagTraf(s::Int,G1)
   d = size(G1)[1]
@@ -228,7 +210,7 @@ function recover(S::TruncatedTensorAlgebraElem;
         R, a = polynomial_ring(QQ, :a => (1:d, 1:m))
 
         I = ideal(R, vec(S - a*core))
-        
+
         @assert dim(I) == 0 "Ideal dimension should be 0"
         @assert degree(I) == 1 "Ideal degree should be 1"
 

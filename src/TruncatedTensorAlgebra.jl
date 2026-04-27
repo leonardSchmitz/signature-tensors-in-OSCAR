@@ -811,7 +811,6 @@ S[:, :]    # level 2
 S[:, :, :] # level 3
 ```
 """
-
 function Base.getindex(x::TruncatedTensorAlgebraElem, w...)
     k=length(w)
     b=parent(x)

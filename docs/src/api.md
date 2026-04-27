@@ -66,6 +66,7 @@ Accessor functions for the components of a `TruncatedTensorAlgebraElem`.
 TruncatedTensorAlgebraElem
 Base.parent(::TruncatedTensorAlgebraElem)
 tensor_sequence(::TruncatedTensorAlgebraElem)
+Base.getindex(x::TruncatedTensorAlgebraElem, w...)
 ```
 
 Standard algebraic operations on `TruncatedTensorAlgebraElem`. All operations respect the

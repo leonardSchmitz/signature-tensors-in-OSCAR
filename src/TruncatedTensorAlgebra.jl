@@ -569,7 +569,13 @@ function sig(T::TruncatedTensorAlgebra{R}, geom_type::Symbol; coef=[], shape=[],
             throw(ArgumentError("sig not supported for given arguments"))
         end
     elseif seq_type == :p2
-        throw(ArgumentError("sig not supported for given arguments"))
+        if geom_type == :axis && coef == [] && (algorithm == :default || algorithm == :AFS19)
+            return sigAxis_p2_ClosedForm(T, shape[1], shape[2])
+        elseif geom_type == :axis && coef == [] && algorithm == :Chen
+            return sigAxis_p2_Chen(T, shape[1], shape[2])
+        else 
+            throw(ArgumentError("sig not supported for given arguments"))
+        end
 
     else
         throw(ArgumentError("sig not supported for given arguments"))
@@ -1989,7 +1995,7 @@ function sigAxis_p2_ClosedForm(T::TruncatedTensorAlgebra{R}, m::Int, n::Int) whe
         sigma_m = sig_m.elem[j+1]
         sigma_n = sig_n.elem[j+1]
 
-        perms = permutations_1_to_j(1:j)
+        perms = permutations_1_to_j(j)
 
         tensor_j = Array{eltype(sigma_m)}(
             undef,
